@@ -491,7 +491,7 @@
           "total": 304000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:21:51.317Z",
-          "minutos": 47,
+          "minutos": 69,
           "limite": 15
         },
         {
@@ -520,7 +520,7 @@
           "total": 45000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:08:12.244Z",
-          "minutos": 62,
+          "minutos": 84,
           "limite": 15
         },
         {
@@ -822,7 +822,7 @@
           "total": 16000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:33:38.332Z",
-          "minutos": 0,
+          "minutos": 22,
           "limite": 15
         },
         {
@@ -851,7 +851,7 @@
           "total": 35000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:10:12.244Z",
-          "minutos": 60,
+          "minutos": 82,
           "limite": 20
         },
         {
@@ -873,7 +873,7 @@
           "total": 46000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:06:12.244Z",
-          "minutos": 64,
+          "minutos": 86,
           "limite": 25
         }
       ],
@@ -942,6 +942,14 @@
       "pinHash": "$2b$10$Bbv03ZoFf7FIFJTaZCKIWuq3WXfZjC9P3cVxp6RVoyxPRjLLdmsuW",
       "name": "Administración Pizzería",
       "role": "admin"
+    },
+    {
+      "id": "u-pizzeria-napoles-1348",
+      "empresaId": "pizzeria-napoles",
+      "username": "mariapizza",
+      "name": "María Pizza",
+      "role": "waiter",
+      "pinHash": "$2b$10$o0k0dsuSYBrWH0bTZHSKO.kB24NoE/B2DmapZ9OVB5PvWN2WAUMoi"
     }
   ]
 }

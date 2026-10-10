@@ -82,8 +82,10 @@ router.put('/:id/config', (req, res) => {
 
   const io = req.app.get('io');
   if (io) {
-    io.emit('tenant:config_updated', updated);
-    io.emit('tables:updated', updated.tables);
+    io.to(req.params.id).emit('tenant:config_updated', updated);
+    if (updated.tables) {
+      io.to(req.params.id).emit('tables:updated', updated.tables);
+    }
   }
 
   res.json({ message: 'Configuración de restaurante actualizada.', tenant: updated });
@@ -99,7 +101,7 @@ router.put('/:id/menu', (req, res) => {
 
   const io = req.app.get('io');
   if (io) {
-    io.emit('tenant:menu_updated', { tenantId: req.params.id, menu });
+    io.to(req.params.id).emit('tenant:menu_updated', { tenantId: req.params.id, menu });
   }
 
   res.json({ message: 'Menú actualizado con éxito.', menu });
@@ -147,9 +149,9 @@ router.post('/:id/close-cash', (req, res) => {
 
     const io = req.app.get('io');
     if (io) {
-      io.emit('cash:closed', { tenantId: req.params.id, closure });
-      io.emit('stats:updated', store.getStats(req.params.id));
-      io.emit('orders:updated', store.getOrders(req.params.id));
+      io.to(req.params.id).emit('cash:closed', { tenantId: req.params.id, closure });
+      io.to(req.params.id).emit('stats:updated', store.getStats(req.params.id));
+      io.to(req.params.id).emit('orders:updated', store.getOrders(req.params.id));
     }
 
     res.json({
