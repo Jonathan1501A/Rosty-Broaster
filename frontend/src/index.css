@@ -1,0 +1,174 @@
+:root {
+  --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+
+  /* Paleta Oficial ROSTY BROASTER (Inspirada en el flyer y marca original) */
+  --bg-app: #1f1109;              /* Chocolate oscuro profundo */
+  --bg-surface: #2b180d;          /* Café tostado */
+  --bg-surface-elevated: #3d2314; /* Tono madera asador */
+  --bg-surface-card: #341e11;     /* Fondo de tarjetas de producto y mesa */
+  --bg-hover: #4d2d1a;
+
+  /* Bordes y Separadores con brasas */
+  --border-subtle: #422515;
+  --border-default: #5c351e;
+  --border-focus: #e27329;
+
+  /* Colores de Marca Oficiales */
+  --brand-primary: #e27329;       /* Naranja crujiente brasa */
+  --brand-primary-hover: #f26419;
+  --brand-gold: #ffcc00;          /* Amarillo dorado del flyer */
+  --brand-glow: rgba(226, 115, 41, 0.35);
+
+  /* Estados Funcionales */
+  --status-free: #2e7d32;         /* Verde libre */
+  --status-occupied: #e27329;     /* Naranja ocupada */
+  --status-bill: #0288d1;         /* Azul cuenta */
+  --status-kitchen-ready: #388e3c;/* Verde listo */
+  --status-danger: #c62828;       /* Rojo alerta / cocina retraso */
+
+  /* Textos */
+  --text-main: #ffffff;
+  --text-secondary: #fbeee0;      /* Crema suave */
+  --text-muted: #c4a48c;         /* Marrón claro legible */
+  --text-gold: #ffcc00;          /* Amarillo precio */
+
+  /* Sombras */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 20px -3px rgba(226, 115, 41, 0.4);
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-app);
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(226, 115, 41, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(255, 204, 0, 0.05) 0%, transparent 40%);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbars temáticos */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-primary);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Animaciones */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 16px 4px rgba(198, 40, 40, 0.9);
+  }
+}
+
+.animate-pulse-danger {
+  animation: pulseGlow 1.4s infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.22s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Botones */
+button {
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  outline: none;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Entradas */
+input, textarea, select {
+  font-family: inherit;
+  background-color: var(--bg-surface);
+  border: 1.5px solid var(--border-default);
+  color: var(--text-main);
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(226, 115, 41, 0.25);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+}

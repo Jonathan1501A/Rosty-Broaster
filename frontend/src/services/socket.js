@@ -1,0 +1,66 @@
+import { io } from 'socket.io-client';
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
+
+let socket = null;
+
+export const initSocket = (callbacks = {}) => {
+  if (!socket) {
+    socket = io(SOCKET_URL, {
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1500,
+      timeout: 10000,
+      transports: ['websocket', 'polling']
+    });
+
+    socket.on('connect', () => {
+      console.log('⚡ Socket.IO conectado:', socket.id);
+      if (callbacks.onConnect) callbacks.onConnect(socket.id);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('🔌 Socket.IO desconectado:', reason);
+      if (callbacks.onDisconnect) callbacks.onDisconnect(reason);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.warn('⚠️ Error de conexión Socket.IO:', error.message);
+      if (callbacks.onError) callbacks.onError(error);
+    });
+
+    if (callbacks.onInitialData) {
+      socket.on('initial:data', callbacks.onInitialData);
+    }
+
+    if (callbacks.onOrderCreated) {
+      socket.on('order:created', callbacks.onOrderCreated);
+    }
+
+    if (callbacks.onOrderUpdated) {
+      socket.on('order:updated', callbacks.onOrderUpdated);
+    }
+
+    if (callbacks.onTablesUpdated) {
+      socket.on('tables:updated', callbacks.onTablesUpdated);
+    }
+
+    if (callbacks.onOrdersTimerTick) {
+      socket.on('orders:timer_tick', callbacks.onOrdersTimerTick);
+    }
+
+    if (callbacks.onStatsUpdated) {
+      socket.on('stats:updated', callbacks.onStatsUpdated);
+    }
+  }
+
+  return socket;
+};
+
+export const getSocket = () => socket;
+
+export const disconnectSocket = () => {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+};
