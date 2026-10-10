@@ -9,9 +9,9 @@ const getActiveTenantId = () => {
   }
 };
 
-const getHeaders = () => {
+const getHeaders = (overrideTenantId) => {
   const token = localStorage.getItem('rosty_auth_token');
-  const tenantId = getActiveTenantId();
+  const tenantId = overrideTenantId || getActiveTenantId();
   const headers = {
     'Content-Type': 'application/json',
     'x-tenant-id': tenantId
@@ -88,7 +88,7 @@ export const api = {
   updateTenantConfig: async (tenantId, config) => {
     const res = await fetch(`${API_URL}/api/tenants/${tenantId}/config`, {
       method: 'PUT',
-      headers: getHeaders(),
+      headers: getHeaders(tenantId),
       body: JSON.stringify(config)
     });
     const data = await res.json();
@@ -99,7 +99,7 @@ export const api = {
   updateTenantMenu: async (tenantId, menu) => {
     const res = await fetch(`${API_URL}/api/tenants/${tenantId}/menu`, {
       method: 'PUT',
-      headers: getHeaders(),
+      headers: getHeaders(tenantId),
       body: JSON.stringify({ menu })
     });
     const data = await res.json();
@@ -110,7 +110,7 @@ export const api = {
   // Personal y Usuarios por Empresa
   getTenantUsers: async (tenantId) => {
     const res = await fetch(`${API_URL}/api/tenants/${tenantId}/users`, {
-      headers: getHeaders()
+      headers: getHeaders(tenantId)
     });
     if (!res.ok) throw new Error('Error al listar usuarios');
     const data = await res.json();
@@ -120,7 +120,7 @@ export const api = {
   createTenantUser: async (tenantId, userData) => {
     const res = await fetch(`${API_URL}/api/tenants/${tenantId}/users`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: getHeaders(tenantId),
       body: JSON.stringify(userData)
     });
     const data = await res.json();
@@ -131,7 +131,7 @@ export const api = {
   deleteTenantUser: async (tenantId, userId) => {
     const res = await fetch(`${API_URL}/api/tenants/${tenantId}/users/${userId}`, {
       method: 'DELETE',
-      headers: getHeaders()
+      headers: getHeaders(tenantId)
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al eliminar usuario');
@@ -142,7 +142,7 @@ export const api = {
   closeCashRegister: async (tenantId, closureData) => {
     const res = await fetch(`${API_URL}/api/tenants/${tenantId}/close-cash`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: getHeaders(tenantId),
       body: JSON.stringify(closureData)
     });
     const data = await res.json();
@@ -151,17 +151,17 @@ export const api = {
   },
 
   // Mesas
-  getTables: async () => {
-    const res = await fetch(`${API_URL}/api/tables`, { headers: getHeaders() });
+  getTables: async (tenantId) => {
+    const res = await fetch(`${API_URL}/api/tables`, { headers: getHeaders(tenantId) });
     if (!res.ok) throw new Error('Error al cargar mesas');
     const data = await res.json();
     return data.tables;
   },
 
-  closeTable: async (numero, payload) => {
+  closeTable: async (numero, payload, tenantId) => {
     const res = await fetch(`${API_URL}/api/tables/${numero}/close`, {
       method: 'POST',
-      headers: getHeaders(),
+      headers: getHeaders(tenantId),
       body: JSON.stringify(payload)
     });
     const data = await res.json();
@@ -170,31 +170,32 @@ export const api = {
   },
 
   // Órdenes
-  getOrders: async (params = {}) => {
+  getOrders: async (params = {}, tenantId) => {
     const query = new URLSearchParams(params).toString();
     const res = await fetch(`${API_URL}/api/orders${query ? `?${query}` : ''}`, {
-      headers: getHeaders()
+      headers: getHeaders(tenantId)
     });
     if (!res.ok) throw new Error('Error al consultar órdenes');
     const data = await res.json();
     return data.orders;
   },
 
-  createOrder: async (orderData) => {
+  createOrder: async (orderData, tenantId) => {
+    const targetTenant = tenantId || orderData?.tenantId || orderData?.empresaId || getActiveTenantId();
     const res = await fetch(`${API_URL}/api/orders`, {
       method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(orderData)
+      headers: getHeaders(targetTenant),
+      body: JSON.stringify({ ...orderData, tenantId: targetTenant })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al crear la comanda');
     return data.order;
   },
 
-  updateOrderStatus: async (orderId, estado) => {
+  updateOrderStatus: async (orderId, estado, tenantId) => {
     const res = await fetch(`${API_URL}/api/orders/${orderId}/status`, {
       method: 'PATCH',
-      headers: getHeaders(),
+      headers: getHeaders(tenantId),
       body: JSON.stringify({ estado })
     });
     const data = await res.json();
@@ -202,10 +203,10 @@ export const api = {
     return data.order;
   },
 
-  toggleOrderItem: async (orderId, itemId) => {
+  toggleOrderItem: async (orderId, itemId, tenantId) => {
     const res = await fetch(`${API_URL}/api/orders/${orderId}/items/${itemId}/toggle`, {
       method: 'PATCH',
-      headers: getHeaders()
+      headers: getHeaders(tenantId)
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al actualizar ítem');
@@ -213,8 +214,8 @@ export const api = {
   },
 
   // Métricas y Auditoría
-  getStats: async () => {
-    const res = await fetch(`${API_URL}/api/stats`, { headers: getHeaders() });
+  getStats: async (tenantId) => {
+    const res = await fetch(`${API_URL}/api/stats`, { headers: getHeaders(tenantId) });
     if (!res.ok) throw new Error('Error al cargar métricas');
     const data = await res.json();
     return data.stats;

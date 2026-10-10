@@ -15,6 +15,25 @@ export const DEFAULT_TENANT = {
   whatsappDomiciliario: '3227801140'
 };
 
+export const DEFAULT_PIZZERIA = {
+  id: 'pizzeria-napoles',
+  nombre: 'Pizzería Nápoles',
+  slogan: 'Auténtica pizza al horno de leña y pastas artesanales',
+  logoEmoji: '🍕',
+  colores: {
+    primario: '#d32f2f',      // Rojo salsa napolitana
+    secundario: '#ffcc00',    // Dorado queso fundido
+    fondo: '#1a1008',         // Carbón de leña
+    superficie: '#2b1a10'     // Madera cálida
+  },
+  numeroMesas: 10,
+  telefono: '3109876543',
+  direccion: 'Carrera 15 #80-10',
+  whatsappDomiciliario: '3109876543'
+};
+
+export const INITIAL_TENANTS = [DEFAULT_TENANT, DEFAULT_PIZZERIA];
+
 export const applyTenantTheme = (tenant) => {
   if (!tenant || !tenant.colores) return;
 
@@ -44,7 +63,9 @@ export const getStoredTenant = () => {
   try {
     const activeId = localStorage.getItem('rosty_active_tenant_id') || DEFAULT_TENANT.id;
     const stored = localStorage.getItem(`rosty_tenant_${activeId}`);
-    return stored ? JSON.parse(stored) : DEFAULT_TENANT;
+    if (stored) return JSON.parse(stored);
+    if (activeId === 'pizzeria-napoles') return DEFAULT_PIZZERIA;
+    return DEFAULT_TENANT;
   } catch {
     return DEFAULT_TENANT;
   }

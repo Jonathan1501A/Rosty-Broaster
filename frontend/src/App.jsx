@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from './components/Navbar.jsx';
 import LoginModal from './components/LoginModal.jsx';
 import TablesView from './components/TablesView.jsx';
@@ -14,39 +14,15 @@ import CloseCashModal from './components/CloseCashModal.jsx';
 import Toast from './components/Toast.jsx';
 
 import { api } from './services/api.js';
-import { initSocket, disconnectSocket } from './services/socket.js';
+import { initSocket, disconnectSocket, joinTenantRoom } from './services/socket.js';
 import { playNewOrderSound, playReadySound } from './services/sound.js';
-import { DEFAULT_TENANT, applyTenantTheme, getStoredTenant } from './data/tenantConfig.js';
+import { DEFAULT_TENANT, DEFAULT_PIZZERIA, applyTenantTheme, getStoredTenant } from './data/tenantConfig.js';
 
-// Función para generar mesas dinámicas según la configuración del restaurante
-const generateTables = (count = 14, existingTables = []) => {
-  return Array.from({ length: count }, (_, i) => {
-    const num = i + 1;
-    const existing = existingTables.find((t) => t.numero === num);
-    if (existing) return existing;
-    return {
-      id: num,
-      numero: num,
-      capacidad: 4,
-      estado: num === 3 ? 'ocupada' : num === 7 ? 'ocupada' : num === 9 ? 'cuenta' : 'libre',
-      apertura: num === 3 ? new Date(Date.now() - 25 * 60000).toISOString() : null,
-      pedidoActual:
-        num === 3
-          ? [
-              { id: 103, name: '1 Pollo + Yuca + Arepa', price: 38000, cantidad: 1 },
-              { id: 703, name: 'Gaseosa Familiar 1.5L', price: 7000, cantidad: 1 }
-            ]
-          : num === 7
-            ? [{ id: 405, name: 'Combo 1 Chow Fan (400 gr + 1/4 Pollo)', price: 25000, cantidad: 1 }]
-            : []
-    };
-  });
-};
-
-// Órdenes iniciales por defecto
-const DEFAULT_ORDERS = [
+// Órdenes de prueba exclusivas para ROSTY Broaster
+const DEFAULT_ROSTY_ORDERS = [
   {
     id: 'ORD-201',
+    empresaId: 'rosty-broaster',
     tipo: 'dine_in',
     destino: 'Mesa 3',
     cliente: 'Salón',
@@ -62,6 +38,7 @@ const DEFAULT_ORDERS = [
   },
   {
     id: 'ORD-202',
+    empresaId: 'rosty-broaster',
     tipo: 'delivery',
     destino: 'Calle 5 #10-20',
     cliente: 'Diego Arévalo',
@@ -73,22 +50,112 @@ const DEFAULT_ORDERS = [
     estado: 'Listo',
     minutos: 17,
     limite: 20
-  },
-  {
-    id: 'ORD-203',
-    tipo: 'takeout',
-    destino: 'Recoge en Barra',
-    cliente: 'Luz Marina',
-    datosExtra: 'Para llevar',
-    items: [
-      { id: 103, name: '1 Pollo + Yuca + Arepa', price: 38000, cantidad: 1, completado: true }
-    ],
-    total: 38000,
-    estado: 'Listo',
-    minutos: 3,
-    limite: 15
   }
 ];
+
+// Órdenes de prueba exclusivas para Pizzería Nápoles (Sin pollo ni platos ajenos)
+const DEFAULT_PIZZERIA_ORDERS = [
+  {
+    id: 'PIZ-101',
+    empresaId: 'pizzeria-napoles',
+    tipo: 'dine_in',
+    destino: 'Mesa 2',
+    cliente: 'Salón',
+    datosExtra: 'Mesa 2',
+    items: [
+      { id: 802, name: 'Pizza Pepperoni Mediana', price: 28000, cantidad: 1, completado: true },
+      { id: 831, name: 'Gaseosa 1.5L Familiar', price: 7000, cantidad: 1, completado: false }
+    ],
+    total: 35000,
+    estado: 'En preparación',
+    minutos: 8,
+    limite: 20
+  },
+  {
+    id: 'PIZ-102',
+    empresaId: 'pizzeria-napoles',
+    tipo: 'delivery',
+    destino: 'Av. Circunvalar #45-12',
+    cliente: 'Andrea Torres',
+    datosExtra: 'Tel: 3105559876',
+    items: [
+      { id: 810, name: 'Pizza Carnes de la Casa (Familiar)', price: 46000, cantidad: 1, completado: false }
+    ],
+    total: 46000,
+    estado: 'En preparación',
+    minutos: 12,
+    limite: 25
+  }
+];
+
+// Generador de mesas aislado por restaurante
+const generateTables = (count = 10, existingTables = [], tenantId = '') => {
+  const isRosty = tenantId === 'rosty-broaster';
+  const isPizzeria = tenantId === 'pizzeria-napoles';
+
+  return Array.from({ length: count }, (_, i) => {
+    const num = i + 1;
+    const existing = existingTables.find((t) => t.numero === num);
+    if (existing) return existing;
+
+    if (isRosty && num === 3) {
+      return {
+        id: num,
+        numero: num,
+        capacidad: 4,
+        estado: 'ocupada',
+        apertura: new Date(Date.now() - 25 * 60000).toISOString(),
+        pedidoActual: [
+          { id: 103, name: '1 Pollo + Yuca + Arepa', price: 38000, cantidad: 1 },
+          { id: 703, name: 'Gaseosa Familiar 1.5L', price: 7000, cantidad: 1 }
+        ]
+      };
+    }
+
+    if (isPizzeria && num === 2) {
+      return {
+        id: num,
+        numero: num,
+        capacidad: 4,
+        estado: 'ocupada',
+        apertura: new Date(Date.now() - 15 * 60000).toISOString(),
+        pedidoActual: [
+          { id: 802, name: 'Pizza Pepperoni Mediana', price: 28000, cantidad: 1 },
+          { id: 831, name: 'Gaseosa 1.5L Familiar', price: 7000, cantidad: 1 }
+        ]
+      };
+    }
+
+    return {
+      id: num,
+      numero: num,
+      capacidad: 4,
+      estado: 'libre',
+      apertura: null,
+      pedidoActual: []
+    };
+  });
+};
+
+const getInitialOrders = (tenantId) => {
+  try {
+    const saved = localStorage.getItem(`rosty_orders_${tenantId}`);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+
+  if (tenantId === 'rosty-broaster') return DEFAULT_ROSTY_ORDERS;
+  if (tenantId === 'pizzeria-napoles') return DEFAULT_PIZZERIA_ORDERS;
+  return [];
+};
+
+const getInitialTables = (tenant) => {
+  const tenantId = tenant?.id || 'rosty-broaster';
+  try {
+    const saved = localStorage.getItem(`rosty_tables_${tenantId}`);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return generateTables(tenant?.numeroMesas || 10, [], tenantId);
+};
 
 export default function App() {
   const [user, setUser] = useState(() => api.getCurrentUser());
@@ -100,31 +167,12 @@ export default function App() {
   });
   const [isConnected, setIsConnected] = useState(false);
 
-  // Datos principales persistentes
-  const [tables, setTables] = useState(() => {
-    try {
-      const activeTenantId = localStorage.getItem('rosty_active_tenant_id') || 'rosty-broaster';
-      const saved = localStorage.getItem(`rosty_tables_${activeTenantId}`);
-      if (saved) return JSON.parse(saved);
-      return generateTables(getStoredTenant()?.numeroMesas || 14);
-    } catch {
-      return generateTables(14);
-    }
-  });
-
-  const [orders, setOrders] = useState(() => {
-    try {
-      const activeTenantId = localStorage.getItem('rosty_active_tenant_id') || 'rosty-broaster';
-      const saved = localStorage.getItem(`rosty_orders_${activeTenantId}`);
-      return saved ? JSON.parse(saved) : DEFAULT_ORDERS;
-    } catch {
-      return DEFAULT_ORDERS;
-    }
-  });
-
+  // Datos principales estrictamente aislados por restaurante
+  const [tables, setTables] = useState(() => getInitialTables(getStoredTenant()));
+  const [orders, setOrders] = useState(() => getInitialOrders(getStoredTenant()?.id || 'rosty-broaster'));
   const [stats, setStats] = useState(null);
 
-  // Estados de Modales de Operación
+  // Modales Operativos
   const [orderModal, setOrderModal] = useState({
     isOpen: false,
     servicioTipo: 'dine_in',
@@ -146,7 +194,7 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCloseCashOpen, setIsCloseCashOpen] = useState(false);
 
-  // Sistema de Notificaciones Toasts
+  // Toasts
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((type, message, title = '') => {
@@ -161,38 +209,34 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Aplicar tema dinámico de colores de la marca
+  const currentTenantId = tenant?.id || 'rosty-broaster';
+
+  // Aplicar tema dinámico de colores de la empresa activa
   useEffect(() => {
     if (tenant) {
       applyTenantTheme(tenant);
     }
   }, [tenant]);
 
-  // Sincronizar número de mesas cuando cambia en la configuración del restaurante
+  // Sincronizar mesas si cambia la configuración de mesas de la empresa
   useEffect(() => {
     if (tenant?.numeroMesas && tables.length !== tenant.numeroMesas) {
-      setTables((prev) => generateTables(tenant.numeroMesas, prev));
+      setTables((prev) => generateTables(tenant.numeroMesas, prev, currentTenantId));
     }
-  }, [tenant?.numeroMesas]);
+  }, [tenant?.numeroMesas, currentTenantId]);
 
-  // Guardar en localStorage aislado por empresa
+  // Guardar en localStorage aislado estrictamente por tenantId
   useEffect(() => {
     try {
-      const tenantId = tenant?.id || 'rosty-broaster';
-      localStorage.setItem(`rosty_tables_${tenantId}`, JSON.stringify(tables));
-    } catch (e) {
-      console.debug('Storage table save error:', e.message);
-    }
-  }, [tables, tenant?.id]);
+      localStorage.setItem(`rosty_tables_${currentTenantId}`, JSON.stringify(tables));
+    } catch (e) {}
+  }, [tables, currentTenantId]);
 
   useEffect(() => {
     try {
-      const tenantId = tenant?.id || 'rosty-broaster';
-      localStorage.setItem(`rosty_orders_${tenantId}`, JSON.stringify(orders));
-    } catch (e) {
-      console.debug('Storage order save error:', e.message);
-    }
-  }, [orders, tenant?.id]);
+      localStorage.setItem(`rosty_orders_${currentTenantId}`, JSON.stringify(orders));
+    } catch (e) {}
+  }, [orders, currentTenantId]);
 
   // Temporizador de minutos de órdenes en cocina cada 15 segundos
   useEffect(() => {
@@ -207,11 +251,11 @@ export default function App() {
     return () => clearInterval(timerInterval);
   }, []);
 
-  // Sincronización en tiempo real entre múltiples pestañas del navegador (BroadcastChannel)
+  // Sincronización en tiempo real entre múltiples pestañas AISLADA por restaurante
   useEffect(() => {
     let channel;
     try {
-      channel = new BroadcastChannel(`rosty_sync_${tenant?.id || 'rosty-broaster'}`);
+      channel = new BroadcastChannel(`tenant_sync_${currentTenantId}`);
       channel.onmessage = (event) => {
         const { type, payload } = event.data || {};
         if (type === 'NEW_ORDER' && payload) {
@@ -224,23 +268,21 @@ export default function App() {
           setTables(payload);
         }
       };
-    } catch (e) {
-      console.debug('BroadcastChannel error:', e);
-    }
+    } catch (e) {}
 
     return () => {
       if (channel) channel.close();
     };
-  }, [tenant?.id, addToast]);
+  }, [currentTenantId, addToast]);
 
-  // Cargar datos iniciales desde el backend si está activo
+  // Cargar datos iniciales desde el backend filtrados por currentTenantId
   const fetchData = useCallback(async () => {
     try {
       const [fetchedTables, fetchedOrders, fetchedStats, fetchedTenant] = await Promise.all([
-        api.getTables().catch(() => null),
-        api.getOrders().catch(() => null),
-        api.getStats().catch(() => null),
-        api.getTenant(tenant?.id || 'rosty-broaster').catch(() => null)
+        api.getTables(currentTenantId).catch(() => null),
+        api.getOrders({}, currentTenantId).catch(() => null),
+        api.getStats(currentTenantId).catch(() => null),
+        api.getTenant(currentTenantId).catch(() => null)
       ]);
 
       if (fetchedTables && fetchedTables.length > 0) setTables(fetchedTables);
@@ -253,15 +295,15 @@ export default function App() {
     } catch (err) {
       console.warn('Backend sync local:', err.message);
     }
-  }, [tenant?.id]);
+  }, [currentTenantId]);
 
-  // Inicializar WebSockets y sincronización
+  // Inicializar WebSockets con sala exclusiva por empresa
   useEffect(() => {
     if (!user) return;
 
     fetchData();
 
-    initSocket({
+    initSocket(currentTenantId, {
       onConnect: () => {
         setIsConnected(true);
       },
@@ -272,9 +314,12 @@ export default function App() {
         setIsConnected(false);
       },
       onInitialData: (data) => {
-        if (data.tables && data.tables.length > 0) setTables(data.tables);
-        if (data.orders && data.orders.length > 0) setOrders(data.orders);
-        if (data.stats) setStats(data.stats);
+        // Acepta datos ÚNICAMENTE si corresponden a la sala de este restaurante
+        if (!data.tenantId || data.tenantId === currentTenantId) {
+          if (data.tables && data.tables.length > 0) setTables(data.tables);
+          if (data.orders) setOrders(data.orders);
+          if (data.stats) setStats(data.stats);
+        }
       },
       onOrderCreated: (newOrder) => {
         setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
@@ -304,54 +349,64 @@ export default function App() {
     return () => {
       disconnectSocket();
     };
-  }, [user, fetchData, addToast]);
+  }, [user, currentTenantId, fetchData, addToast]);
 
   // Manejar Login Estricto con Empresa y PIN
   const handleLoginSuccess = (authenticatedUser, selectedTenant) => {
     setUser(authenticatedUser);
-    if (selectedTenant) {
-      setTenant(selectedTenant);
-      applyTenantTheme(selectedTenant);
-      localStorage.setItem('rosty_active_tenant_id', selectedTenant.id);
-      localStorage.setItem(`rosty_tenant_${selectedTenant.id}`, JSON.stringify(selectedTenant));
-    }
+    const targetTenant = selectedTenant || DEFAULT_TENANT;
+    setTenant(targetTenant);
+    applyTenantTheme(targetTenant);
+
+    localStorage.setItem('rosty_active_tenant_id', targetTenant.id);
+    localStorage.setItem(`rosty_tenant_${targetTenant.id}`, JSON.stringify(targetTenant));
+
+    // RECARGAR MESAS Y ÓRDENES EXCLUSIVAS DE ESTE RESTAURANTE (Cero mezclas)
+    const freshTables = getInitialTables(targetTenant);
+    const freshOrders = getInitialOrders(targetTenant.id);
+    setTables(freshTables);
+    setOrders(freshOrders);
+    setStats(null);
+
+    // Unirse a la sala de WebSockets del restaurante
+    joinTenantRoom(targetTenant.id);
+
     setActiveTab(authenticatedUser.role === 'chef' ? 'kitchen' : authenticatedUser.role === 'admin' ? 'reports' : 'tables');
-    addToast('success', `Turno iniciado en ${selectedTenant?.nombre || 'el restaurante'} como ${authenticatedUser.name || authenticatedUser.username}.`, '¡Bienvenido!');
+    addToast('success', `Turno iniciado en ${targetTenant.nombre} como ${authenticatedUser.name || authenticatedUser.username}.`, '¡Bienvenido!');
   };
 
-  // Manejar Logout
+  // Manejar Logout / Cambiar de Restaurante
   const handleLogout = () => {
     api.logout();
     disconnectSocket();
     setUser(null);
-    addToast('info', 'Sesión cerrada correctamente. Requiere PIN para volver a ingresar.', 'Turno Finalizado');
+    addToast('info', 'Sesión cerrada. Selecciona el restaurante para iniciar turno.', 'Turno Finalizado');
   };
 
-  // Guardar Personalización del Restaurante (Colores, Nombre, Mesas, WhatsApp)
+  // Guardar Personalización del Restaurante
   const handleSaveConfig = async (newConfig) => {
-    const updated = await api.updateTenantConfig(tenant.id, newConfig);
+    const updated = await api.updateTenantConfig(currentTenantId, newConfig);
     setTenant(updated);
     applyTenantTheme(updated);
-    localStorage.setItem(`rosty_tenant_${tenant.id}`, JSON.stringify(updated));
+    localStorage.setItem(`rosty_tenant_${currentTenantId}`, JSON.stringify(updated));
     if (newConfig.numeroMesas) {
-      setTables((prev) => generateTables(newConfig.numeroMesas, prev));
+      setTables((prev) => generateTables(newConfig.numeroMesas, prev, currentTenantId));
     }
     addToast('success', `Configuración de "${updated.nombre}" guardada con éxito.`, 'Restaurante Actualizado');
   };
 
-  // Guardar Menú Actualizado (Platos, Categorías y Precios)
+  // Guardar Menú Actualizado
   const handleSaveMenu = async (newMenu) => {
-    const saved = await api.updateTenantMenu(tenant.id, newMenu);
+    const saved = await api.updateTenantMenu(currentTenantId, newMenu);
     setTenant((prev) => ({ ...prev, menu: saved }));
-    localStorage.setItem(`rosty_tenant_${tenant.id}`, JSON.stringify({ ...tenant, menu: saved }));
+    localStorage.setItem(`rosty_tenant_${currentTenantId}`, JSON.stringify({ ...tenant, menu: saved }));
     addToast('success', 'El menú y los precios fueron actualizados en tiempo real.', 'Menú Guardado');
   };
 
   // Cierre de Caja del Día (Corte Z)
   const handleConfirmCloseCash = async (closureData) => {
     try {
-      const closure = await api.closeCashRegister(tenant.id, closureData);
-      // Reiniciar ventas activas a $0 de inmediato en el front
+      const closure = await api.closeCashRegister(currentTenantId, closureData);
       setOrders([]);
       setStats({
         totalVendido: 0,
@@ -363,7 +418,6 @@ export default function App() {
       });
       addToast('success', 'Cierre Z procesado. Las ventas han sido archivadas y la caja del día comienza en $0.', '💰 Caja Cerrada');
     } catch (err) {
-      // Si el backend no respondió, limpiar localmente
       setOrders([]);
       setStats({
         totalVendido: 0,
@@ -415,11 +469,12 @@ export default function App() {
     });
   };
 
-  // Enviar pedido desde OrderDrawer
+  // Enviar pedido desde OrderDrawer (Bloqueado al restaurante actual)
   const handleSendOrder = async (orderPayload) => {
     const localId = `ORD-${Date.now().toString().slice(-4)}`;
     const newOrder = {
       id: localId,
+      empresaId: currentTenantId,
       tipo: orderPayload.tipo,
       destino: orderPayload.destino,
       cliente: orderPayload.cliente,
@@ -447,16 +502,19 @@ export default function App() {
     playNewOrderSound();
     addToast('success', `Comanda #${newOrder.id} (${newOrder.destino}) enviada a la cocina.`, '🔥 ¡Comanda en Cocina!');
 
-    // Notificar a otras pestañas
+    // Notificar por BroadcastChannel exclusivo de esta empresa
     try {
-      const channel = new BroadcastChannel(`rosty_sync_${tenant?.id || 'rosty-broaster'}`);
+      const channel = new BroadcastChannel(`tenant_sync_${currentTenantId}`);
       channel.postMessage({ type: 'NEW_ORDER', payload: newOrder });
       channel.close();
     } catch (e) {}
 
-    // Sincronizar en segundo plano con el backend
+    // Sincronizar en segundo plano con el backend pasando currentTenantId
     try {
-      const serverOrder = await api.createOrder(orderPayload);
+      const serverOrder = await api.createOrder(
+        { ...orderPayload, empresaId: currentTenantId }, 
+        currentTenantId
+      );
       if (serverOrder && serverOrder.id) {
         setOrders((prev) => prev.map((o) => (o.id === localId ? serverOrder : o)));
       }
@@ -478,7 +536,7 @@ export default function App() {
     setTables(newTables);
 
     try {
-      const channel = new BroadcastChannel(`rosty_sync_${tenant?.id || 'rosty-broaster'}`);
+      const channel = new BroadcastChannel(`tenant_sync_${currentTenantId}`);
       channel.postMessage({ type: 'UPDATE_TABLES', payload: newTables });
       channel.close();
     } catch (e) {}
@@ -496,8 +554,8 @@ export default function App() {
     );
 
     try {
-      await api.closeTable(closePayload.numero, closePayload);
-      api.getStats().then((st) => setStats(st)).catch(() => {});
+      await api.closeTable(closePayload.numero, closePayload, currentTenantId);
+      api.getStats(currentTenantId).then((st) => setStats(st)).catch(() => {});
     } catch (err) {
       console.debug('Cierre de mesa guardado localmente:', err.message);
     }
@@ -510,7 +568,7 @@ export default function App() {
     );
 
     try {
-      const channel = new BroadcastChannel(`rosty_sync_${tenant?.id || 'rosty-broaster'}`);
+      const channel = new BroadcastChannel(`tenant_sync_${currentTenantId}`);
       channel.postMessage({ type: 'UPDATE_ORDER', payload: { id: orderId, estado: nuevoEstado } });
       channel.close();
     } catch (e) {}
@@ -523,7 +581,7 @@ export default function App() {
     }
 
     try {
-      await api.updateOrderStatus(orderId, nuevoEstado);
+      await api.updateOrderStatus(orderId, nuevoEstado, currentTenantId);
     } catch (err) {
       console.debug('Estado sincronizado localmente:', err.message);
     }
@@ -544,13 +602,13 @@ export default function App() {
     );
 
     try {
-      const channel = new BroadcastChannel(`rosty_sync_${tenant?.id || 'rosty-broaster'}`);
+      const channel = new BroadcastChannel(`tenant_sync_${currentTenantId}`);
       channel.postMessage({ type: 'UPDATE_ORDER', payload: { id: orderId, itemId, toggle: true } });
       channel.close();
     } catch (e) {}
 
     try {
-      await api.toggleOrderItem(orderId, itemId);
+      await api.toggleOrderItem(orderId, itemId, currentTenantId);
     } catch (err) {
       console.debug('Checklist guardado localmente:', err.message);
     }
@@ -650,7 +708,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Drawer de Toma de Comanda con Menú Dinámico */}
+      {/* Drawer de Toma de Comanda con Menú Exclusivo del Restaurante Activo */}
       <OrderDrawer
         isOpen={orderModal.isOpen}
         onClose={() => setOrderModal((prev) => ({ ...prev, isOpen: false }))}

@@ -49,8 +49,8 @@ export default function KitchenView({
         key={orden.id}
         className={`animate-fade-in ${isLate ? 'animate-pulse-danger' : ''}`}
         style={{
-          backgroundColor: '#3d2314',
-          border: `2px solid ${isLate ? '#c62828' : isWarning ? '#ffcc00' : '#e27329'}`,
+          backgroundColor: 'var(--bg-surface, #3d2314)',
+          border: `2px solid ${isLate ? '#c62828' : isWarning ? '#ffcc00' : 'var(--brand-primary, #e27329)'}`,
           borderRadius: '16px',
           padding: '16px',
           display: 'flex',

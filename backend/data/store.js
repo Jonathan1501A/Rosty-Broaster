@@ -1,9 +1,14 @@
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { DEFAULT_MENU } from './defaultMenu.js';
 
-// Empresa insignia por defecto: ROSTY Broaster
-const DEFAULT_TENANT_ID = 'rosty-broaster';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DB_FILE = path.join(__dirname, 'db.json');
 
+// Empresa 1: ROSTY Broaster (Pollería Tradicional)
 const INITIAL_ROSTY_CONFIG = {
   id: 'rosty-broaster',
   nombre: 'ROSTY Broaster',
@@ -48,6 +53,75 @@ const INITIAL_ROSTY_USERS = [
   }
 ];
 
+// Empresa 2: Pizzería Nápoles (Pizzas & Pastas Artesanales)
+const INITIAL_PIZZERIA_CONFIG = {
+  id: 'pizzeria-napoles',
+  nombre: 'Pizzería Nápoles',
+  slogan: 'Auténtica pizza al horno de leña y pastas artesanales',
+  logoEmoji: '🍕',
+  colores: {
+    primario: '#d32f2f',      // Rojo salsa pomodoro
+    secundario: '#ffcc00',    // Dorado queso derretido
+    fondo: '#1a1008',         // Carbón horno leña
+    superficie: '#2b1a10'     // Madera rústica
+  },
+  numeroMesas: 10,
+  telefono: '3109876543',
+  direccion: 'Carrera 15 #80-10',
+  whatsappDomiciliario: '3109876543'
+};
+
+const PIZZERIA_MENU = {
+  'Pizzas Tradicionales 🍕': [
+    { id: 801, name: 'Pizza Margarita Personal', price: 16000, desc: 'Salsa pomodoro napolitana, mozzarella fresca, albahaca y aceite de oliva virgen extra.' },
+    { id: 802, name: 'Pizza Pepperoni Mediana', price: 28000, desc: 'Generosa capa de pepperoni americano crujiente con queso mozzarella fundido.' },
+    { id: 803, name: 'Pizza Hawaiana Familiar', price: 38000, desc: 'Jamón artesanal seleccionado, piña caramelizada al horno y doble queso.' },
+    { id: 804, name: 'Pizza Cuatro Quesos Especial', price: 42000, desc: 'Mozzarella, parmesano reggiano, queso azul y provolone fundido.' }
+  ],
+  'Pizzas Especiales & Carnes 🥩': [
+    { id: 810, name: 'Pizza Carnes de la Casa (Familiar)', price: 46000, desc: 'Tocineta crocante, carne molida especiada, pepperoni, jamón y maíz tierno.' },
+    { id: 811, name: 'Pizza Pollo con Champiñones', price: 36000, desc: 'Pechuga desmechada al vino blanco, champiñones salteados y mozzarella.' },
+    { id: 812, name: 'Pizza Mexicana Picante', price: 39000, desc: 'Carne picada, jalapeños, nachos triturados, frijol refrito y queso.' }
+  ],
+  'Pastas & Lasagnas 🍝': [
+    { id: 820, name: 'Lasagna Mixta al Horno', price: 24000, desc: 'Capas de pasta artesanal con carne bolognesa, pollo desmechado y gratinado de queso.' },
+    { id: 821, name: 'Spaghetti a la Carbonara', price: 22000, desc: 'Tocineta dorada, crema de leche suave, queso parmesano y pimienta negra recién molida.' },
+    { id: 822, name: 'Fettuccine Alfredo con Pollo', price: 25000, desc: 'Salsa Alfredo mantecosa con tiras de pechuga a la plancha y perejil fresco.' }
+  ],
+  'Entradas & Bebidas 🥤': [
+    { id: 830, name: 'Pan de Ajo con Queso (4 unidades)', price: 9000, desc: 'Baguette tostado con mantequilla de ajo, orégano y queso derretido.' },
+    { id: 831, name: 'Gaseosa 1.5L Familiar', price: 7000, desc: 'Coca-Cola, Postobón o Sprite fría.' },
+    { id: 832, name: 'Cerveza Club Colombia / Corona', price: 6500, desc: 'Botella fría de cerveza premium.' }
+  ]
+};
+
+const INITIAL_PIZZERIA_USERS = [
+  {
+    id: 'u-pizzeria-waiter',
+    empresaId: 'pizzeria-napoles',
+    username: 'waiter',
+    pinHash: bcrypt.hashSync('pizza123', 10),
+    name: 'Mesero Pizzería',
+    role: 'waiter'
+  },
+  {
+    id: 'u-pizzeria-chef',
+    empresaId: 'pizzeria-napoles',
+    username: 'chef',
+    pinHash: bcrypt.hashSync('cocina123', 10),
+    name: 'Maestro Pizzero (KDS)',
+    role: 'chef'
+  },
+  {
+    id: 'u-pizzeria-admin',
+    empresaId: 'pizzeria-napoles',
+    username: 'admin',
+    pinHash: bcrypt.hashSync('admin123', 10),
+    name: 'Administración Pizzería',
+    role: 'admin'
+  }
+];
+
 const createTablesArray = (count = 14) => {
   return Array.from({ length: count }, (_, i) => ({
     id: i + 1,
@@ -69,6 +143,29 @@ const createTablesArray = (count = 14) => {
 
 class Store {
   constructor() {
+    this.tenants = [];
+    this.users = [];
+    this.init();
+  }
+
+  init() {
+    // Intentar cargar datos persistentes de disco si existen
+    if (fs.existsSync(DB_FILE)) {
+      try {
+        const raw = fs.readFileSync(DB_FILE, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed.tenants && parsed.tenants.length > 0) {
+          this.tenants = parsed.tenants;
+          this.users = parsed.users || [];
+          console.log(`💾 Base de datos cargada de disco: ${this.tenants.length} restaurantes.`);
+          return;
+        }
+      } catch (err) {
+        console.warn('Error al leer db.json, reinicializando por defecto:', err.message);
+      }
+    }
+
+    // Si no existe archivo, inicializar con ROSTY Broaster y Pizzería Nápoles
     this.tenants = [
       {
         ...INITIAL_ROSTY_CONFIG,
@@ -103,7 +200,7 @@ class Store {
               { id: 405, name: 'Combo 1 Chow Fan (400 gr + 1/4 Pollo)', price: 25000, cantidad: 1, completado: false }
             ],
             total: 25000,
-            estado: 'En preparación',
+            estado: 'Listo',
             createdAt: new Date(Date.now() - 17 * 60000).toISOString(),
             minutos: 17,
             limite: 20
@@ -128,34 +225,115 @@ class Store {
         salesHistory: [
           {
             id: 'REC-1001',
-            ordenId: 'ORD-198',
-            destino: 'Mesa 1',
+            ordenId: 'MESA-4',
+            destino: 'Mesa 4',
             cliente: 'Salón',
-            total: 58000,
+            total: 52000,
             metodoPago: 'efectivo',
             montoRecibido: 60000,
-            cambio: 2000,
+            cambio: 8000,
             despachadoPor: 'waiter',
-            timestamp: new Date(Date.now() - 120 * 60000).toISOString()
+            timestamp: new Date(Date.now() - 45 * 60000).toISOString()
           },
           {
             id: 'REC-1002',
-            ordenId: 'ORD-199',
-            destino: 'Cra 12 #4-15',
-            cliente: 'Carlos Peña',
-            total: 47000,
+            ordenId: 'DOM-88',
+            destino: 'Carrera 7 #12-30',
+            cliente: 'Carlos Méndez',
+            total: 38000,
             metodoPago: 'nequi',
-            montoRecibido: 47000,
+            montoRecibido: 38000,
             cambio: 0,
             despachadoPor: 'waiter',
             timestamp: new Date(Date.now() - 85 * 60000).toISOString()
           }
         ],
         closures: []
+      },
+      {
+        ...INITIAL_PIZZERIA_CONFIG,
+        menu: JSON.parse(JSON.stringify(PIZZERIA_MENU)),
+        tables: Array.from({ length: 10 }, (_, i) => ({
+          id: i + 1,
+          numero: i + 1,
+          capacidad: 4,
+          estado: i === 1 ? 'ocupada' : 'libre',
+          apertura: i === 1 ? new Date(Date.now() - 15 * 60000).toISOString() : null,
+          pedidoActual:
+            i === 1
+              ? [
+                  { id: 802, name: 'Pizza Pepperoni Mediana', price: 28000, cantidad: 1 },
+                  { id: 831, name: 'Gaseosa 1.5L Familiar', price: 7000, cantidad: 1 }
+                ]
+              : []
+        })),
+        orders: [
+          {
+            id: 'PIZ-101',
+            empresaId: 'pizzeria-napoles',
+            tipo: 'dine_in',
+            destino: 'Mesa 2',
+            cliente: 'Salón',
+            datosExtra: 'Mesa 2',
+            items: [
+              { id: 802, name: 'Pizza Pepperoni Mediana', price: 28000, cantidad: 1, completado: true },
+              { id: 831, name: 'Gaseosa 1.5L Familiar', price: 7000, cantidad: 1, completado: false }
+            ],
+            total: 35000,
+            estado: 'En preparación',
+            createdAt: new Date(Date.now() - 8 * 60000).toISOString(),
+            minutos: 8,
+            limite: 20
+          },
+          {
+            id: 'PIZ-102',
+            empresaId: 'pizzeria-napoles',
+            tipo: 'delivery',
+            destino: 'Av. Circunvalar #45-12',
+            cliente: 'Andrea Torres',
+            datosExtra: 'Tel: 3105559876',
+            items: [
+              { id: 810, name: 'Pizza Carnes de la Casa (Familiar)', price: 46000, cantidad: 1, completado: false }
+            ],
+            total: 46000,
+            estado: 'En preparación',
+            createdAt: new Date(Date.now() - 12 * 60000).toISOString(),
+            minutos: 12,
+            limite: 25
+          }
+        ],
+        salesHistory: [
+          {
+            id: 'REC-P01',
+            ordenId: 'MESA-5',
+            destino: 'Mesa 5',
+            cliente: 'Salón',
+            total: 42000,
+            metodoPago: 'tarjeta',
+            montoRecibido: 42000,
+            cambio: 0,
+            despachadoPor: 'waiter',
+            timestamp: new Date(Date.now() - 60 * 60000).toISOString()
+          }
+        ],
+        closures: []
       }
     ];
 
-    this.users = [...INITIAL_ROSTY_USERS];
+    this.users = [...INITIAL_ROSTY_USERS, ...INITIAL_PIZZERIA_USERS];
+    this.persist();
+  }
+
+  persist() {
+    try {
+      const dataToSave = {
+        tenants: this.tenants,
+        users: this.users
+      };
+      fs.writeFileSync(DB_FILE, JSON.stringify(dataToSave, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('Error al persistir base de datos a disco:', e.message);
+    }
   }
 
   // --- GESTIÓN DE EMPRESAS (TENANTS) ---
@@ -174,7 +352,7 @@ class Store {
     }));
   }
 
-  getTenant(tenantId = DEFAULT_TENANT_ID) {
+  getTenant(tenantId = 'rosty-broaster') {
     let t = this.tenants.find(ten => ten.id === tenantId);
     if (!t) {
       t = this.tenants[0]; // Fallback seguro
@@ -228,39 +406,49 @@ class Store {
 
     this.tenants.push(newTenant);
 
-    // Crear usuario administrador inicial para la empresa
+    // Crear usuario admin para este nuevo restaurante
     const adminUser = {
       id: `u-${tenantId}-admin`,
       empresaId: tenantId,
       username: 'admin',
-      name: adminName || `Admin ${nombre}`,
-      role: 'admin',
-      pinHash: bcrypt.hashSync(adminPin, 10)
+      pinHash: bcrypt.hashSync(adminPin, 10),
+      name: adminName,
+      role: 'admin'
     };
 
-    // Crear usuario mesero inicial
+    // Crear usuario mesero por defecto
     const waiterUser = {
       id: `u-${tenantId}-waiter`,
       empresaId: tenantId,
       username: 'waiter',
-      name: `Mesero 1`,
-      role: 'waiter',
-      pinHash: bcrypt.hashSync('1234', 10)
+      pinHash: bcrypt.hashSync('1234', 10),
+      name: `Mesero ${nombre}`,
+      role: 'waiter'
     };
 
-    // Crear usuario cocinero inicial
+    // Crear cocinero por defecto
     const chefUser = {
       id: `u-${tenantId}-chef`,
       empresaId: tenantId,
       username: 'chef',
-      name: `Cocinero 1`,
-      role: 'chef',
-      pinHash: bcrypt.hashSync('1234', 10)
+      pinHash: bcrypt.hashSync('1234', 10),
+      name: `Cocina ${nombre}`,
+      role: 'chef'
     };
 
     this.users.push(adminUser, waiterUser, chefUser);
+    this.persist();
 
-    return { tenant: newTenant, adminUser };
+    return {
+      tenant: newTenant,
+      adminUser: {
+        id: adminUser.id,
+        empresaId: adminUser.empresaId,
+        username: adminUser.username,
+        name: adminUser.name,
+        role: adminUser.role
+      }
+    };
   }
 
   updateTenantConfig(tenantId, config) {
@@ -268,20 +456,23 @@ class Store {
     if (!tenant) return null;
 
     if (config.nombre) tenant.nombre = config.nombre.trim();
-    if (config.slogan !== undefined) tenant.slogan = config.slogan;
+    if (config.slogan !== undefined) tenant.slogan = config.slogan.trim();
     if (config.logoEmoji) tenant.logoEmoji = config.logoEmoji;
-    if (config.colores) tenant.colores = { ...tenant.colores, ...config.colores };
     if (config.telefono !== undefined) tenant.telefono = config.telefono;
     if (config.direccion !== undefined) tenant.direccion = config.direccion;
     if (config.whatsappDomiciliario !== undefined) tenant.whatsappDomiciliario = config.whatsappDomiciliario;
 
-    // Actualizar número de mesas si cambió
-    if (config.numeroMesas && Number(config.numeroMesas) !== tenant.numeroMesas) {
-      const newCount = Math.max(1, Math.min(50, Number(config.numeroMesas)));
-      tenant.numeroMesas = newCount;
+    if (config.colores) {
+      tenant.colores = {
+        ...tenant.colores,
+        ...config.colores
+      };
+    }
 
+    if (config.numeroMesas && Number(config.numeroMesas) > 0) {
+      const newCount = Number(config.numeroMesas);
+      tenant.numeroMesas = newCount;
       if (newCount > tenant.tables.length) {
-        // Agregar nuevas mesas
         for (let i = tenant.tables.length + 1; i <= newCount; i++) {
           tenant.tables.push({
             id: i,
@@ -293,11 +484,11 @@ class Store {
           });
         }
       } else if (newCount < tenant.tables.length) {
-        // Reducir solo si están libres
         tenant.tables = tenant.tables.slice(0, newCount);
       }
     }
 
+    this.persist();
     return tenant;
   }
 
@@ -305,6 +496,7 @@ class Store {
     const tenant = this.getTenant(tenantId);
     if (!tenant) return null;
     tenant.menu = newMenu;
+    this.persist();
     return tenant.menu;
   }
 
@@ -326,7 +518,6 @@ class Store {
     const tenant = this.getTenant(tenantId);
     if (!tenant) throw new Error('Empresa no encontrada.');
 
-    // Verificar si el username ya existe en esa empresa
     const exists = this.users.some(
       u => u.empresaId === tenantId && u.username.toLowerCase() === username.toLowerCase()
     );
@@ -344,6 +535,8 @@ class Store {
     };
 
     this.users.push(newUser);
+    this.persist();
+
     return {
       id: newUser.id,
       empresaId: newUser.empresaId,
@@ -356,7 +549,9 @@ class Store {
   deleteUser(tenantId, userId) {
     const initialLen = this.users.length;
     this.users = this.users.filter(u => !(u.empresaId === tenantId && u.id === userId));
-    return this.users.length < initialLen;
+    const wasDeleted = this.users.length < initialLen;
+    if (wasDeleted) this.persist();
+    return wasDeleted;
   }
 
   findUser(tenantId, identifier) {
@@ -370,7 +565,7 @@ class Store {
 
   // --- MESAS POR EMPRESA ---
 
-  getTables(tenantId = DEFAULT_TENANT_ID) {
+  getTables(tenantId = 'rosty-broaster') {
     return this.getTenant(tenantId).tables;
   }
 
@@ -384,6 +579,7 @@ class Store {
         apertura: tenant.tables[tableIndex].apertura || new Date().toISOString(),
         pedidoActual: items
       };
+      this.persist();
       return tenant.tables[tableIndex];
     }
     return null;
@@ -414,12 +610,10 @@ class Store {
       tenant.salesHistory.unshift(receipt);
     }
 
-    // Actualizar pedidos de esa mesa a 'Despachado'
     tenant.orders = tenant.orders.map((o) =>
       o.destino === `Mesa ${numero}` ? { ...o, estado: 'Despachado', updatedAt: new Date().toISOString() } : o
     );
 
-    // Resetear mesa a libre
     tenant.tables[tableIndex] = {
       ...tenant.tables[tableIndex],
       estado: 'libre',
@@ -427,12 +621,13 @@ class Store {
       pedidoActual: []
     };
 
+    this.persist();
     return { table: tenant.tables[tableIndex], receipt };
   }
 
   // --- ÓRDENES POR EMPRESA ---
 
-  getOrders(tenantId = DEFAULT_TENANT_ID) {
+  getOrders(tenantId = 'rosty-broaster') {
     return this.getTenant(tenantId).orders;
   }
 
@@ -450,48 +645,66 @@ class Store {
       estado: 'En preparación',
       createdAt: new Date().toISOString(),
       minutos: 0,
-      limite: orderData.tipo === 'delivery' ? 25 : 15,
-      ...orderData
+      limite: orderData.tipo === 'delivery' ? 20 : 15
     };
 
     tenant.orders.unshift(newOrder);
 
     if (orderData.tipo === 'dine_in' && orderData.mesaNumero) {
-      this.occupyTable(tenantId, orderData.mesaNumero, orderData.items);
+      this.occupyTable(tenant.id, orderData.mesaNumero, orderData.items);
     }
 
+    this.persist();
     return newOrder;
   }
 
-  updateOrderStatus(tenantId, orderId, nuevoEstado) {
+  updateOrderStatus(tenantId, orderId, estado) {
     const tenant = this.getTenant(tenantId);
-    const orderIndex = tenant.orders.findIndex((o) => String(o.id) === String(orderId));
-    if (orderIndex === -1) return null;
+    const order = tenant.orders.find((o) => o.id === orderId);
+    if (!order) return null;
 
-    tenant.orders[orderIndex] = {
-      ...tenant.orders[orderIndex],
-      estado: nuevoEstado,
-      updatedAt: new Date().toISOString()
-    };
+    order.estado = estado;
+    order.updatedAt = new Date().toISOString();
 
-    return tenant.orders[orderIndex];
+    if (estado === 'Despachado') {
+      const alreadyInHistory = tenant.salesHistory.some((s) => s.ordenId === orderId);
+      if (!alreadyInHistory) {
+        tenant.salesHistory.unshift({
+          id: `REC-${Date.now().toString().slice(-4)}`,
+          ordenId: order.id,
+          destino: order.destino,
+          cliente: order.cliente,
+          total: order.total,
+          metodoPago: 'efectivo',
+          montoRecibido: order.total,
+          cambio: 0,
+          despachadoPor: 'Cocina/Despacho',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    this.persist();
+    return order;
   }
 
-  toggleItemComplete(tenantId, orderId, itemId) {
+  toggleOrderItem(tenantId, orderId, itemId) {
     const tenant = this.getTenant(tenantId);
-    const order = tenant.orders.find((o) => String(o.id) === String(orderId));
+    const order = tenant.orders.find((o) => o.id === orderId);
     if (!order || !order.items) return null;
 
     const item = order.items.find((i) => i.id === Number(itemId));
     if (item) {
       item.completado = !item.completado;
+      this.persist();
+      return order;
     }
-    return order;
+    return null;
   }
 
-  // --- CIERRE DE CAJA DEL DÍA (CORTE Z) & ESTADÍSTICAS ---
+  // --- MÉTRICAS Y AUDITORÍA POR EMPRESA ---
 
-  getStats(tenantId = DEFAULT_TENANT_ID) {
+  getStats(tenantId = 'rosty-broaster') {
     const tenant = this.getTenant(tenantId);
     const totalVendido = tenant.salesHistory.reduce((sum, r) => sum + r.total, 0);
     const totalComandasDespachadas = tenant.salesHistory.length;
@@ -578,6 +791,7 @@ class Store {
     // Limpiar órdenes finalizadas para el siguiente día
     tenant.orders = tenant.orders.filter(o => o.estado !== 'Despachado');
 
+    this.persist();
     return closureRecord;
   }
 
@@ -593,6 +807,7 @@ class Store {
         return o;
       });
     }
+    if (changed) this.persist();
     return changed;
   }
 }

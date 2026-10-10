@@ -34,9 +34,9 @@ router.post('/:numero/close', (req, res) => {
 
   const io = req.app.get('io');
   if (io) {
-    io.emit('tables:updated', { tenantId, tables: store.getTables(tenantId) });
-    io.emit('orders:refreshed', { tenantId, orders: store.getOrders(tenantId) });
-    io.emit('stats:updated', { tenantId, stats: store.getStats(tenantId) });
+    io.to(tenantId).emit('tables:updated', store.getTables(tenantId));
+    io.to(tenantId).emit('orders:refreshed', store.getOrders(tenantId));
+    io.to(tenantId).emit('stats:updated', store.getStats(tenantId));
   }
 
   res.json({

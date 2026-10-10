@@ -12,7 +12,8 @@ import {
   Clock,
   Settings,
   Users,
-  DollarSign
+  DollarSign,
+  Building2
 } from 'lucide-react';
 import { toggleSound, getSoundEnabled } from '../services/sound.js';
 
@@ -57,8 +58,8 @@ export default function Navbar({
   return (
     <header
       style={{
-        backgroundColor: '#3d2314',
-        borderBottom: '3px solid #e27329',
+        backgroundColor: 'var(--bg-surface, #3d2314)',
+        borderBottom: '3px solid var(--brand-primary, #e27329)',
         padding: '10px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -79,26 +80,26 @@ export default function Navbar({
               width: '44px',
               height: '44px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #ffcc00 0%, #e27329 100%)',
-              border: '2px solid #ffcc00',
+              background: 'linear-gradient(135deg, var(--brand-gold, #ffcc00) 0%, var(--brand-primary, #e27329) 100%)',
+              border: '2px solid var(--brand-gold, #ffcc00)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '22px',
-              boxShadow: '0 4px 12px rgba(226, 115, 41, 0.45)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.45)',
               flexShrink: 0
             }}
           >
-            {tenant?.logoEmoji || '🐔'}
+            {tenant?.logoEmoji || '🍽️'}
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.25rem', fontWeight: '900', color: '#ffcc00', letterSpacing: '-0.5px' }}>
-                {tenant?.nombre || 'ROSTY Broaster'}
+              <span style={{ fontSize: '1.25rem', fontWeight: '900', color: 'var(--brand-gold, #ffcc00)', letterSpacing: '-0.5px' }}>
+                {tenant?.nombre || 'Restaurante'}
               </span>
             </div>
             <div style={{ fontSize: '0.68rem', color: '#fbeee0', fontWeight: '700', letterSpacing: '0.5px' }}>
-              {tenant?.slogan || 'El Original V. - El mejor pollo al estilo americano'}
+              {tenant?.slogan || 'Sistema POS & Cocina'}
             </div>
           </div>
         </div>
@@ -128,9 +129,9 @@ export default function Navbar({
         {role === 'waiter' && (
           <div
             style={{
-              backgroundColor: '#2b180d',
-              border: '1.5px solid #e27329',
-              color: '#ffcc00',
+              backgroundColor: 'var(--bg-app, #2b180d)',
+              border: '1.5px solid var(--brand-primary, #e27329)',
+              color: 'var(--brand-gold, #ffcc00)',
               padding: '8px 16px',
               borderRadius: '12px',
               display: 'flex',
@@ -140,7 +141,7 @@ export default function Navbar({
               fontSize: '0.85rem'
             }}
           >
-            <UtensilsCrossed size={17} color="#e27329" />
+            <UtensilsCrossed size={17} color="var(--brand-primary, #e27329)" />
             <span>MÓDULO DE MESERO: SALÓN Y COMANDAS</span>
           </div>
         )}
@@ -438,6 +439,29 @@ export default function Navbar({
             {role === 'chef' ? 'Cocina' : role === 'admin' ? 'Admin' : 'Mesero'}
           </span>
         </div>
+
+        {/* Cambiar de Restaurante */}
+        <button
+          type="button"
+          onClick={onLogout}
+          title="Cambiar de Restaurante / Empresa"
+          style={{
+            backgroundColor: '#2b180d',
+            color: '#ffcc00',
+            border: '1.5px solid #ffcc00',
+            padding: '7px 12px',
+            borderRadius: '10px',
+            fontSize: '0.8rem',
+            fontWeight: '800',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            cursor: 'pointer'
+          }}
+        >
+          <Building2 size={15} />
+          <span>Cambiar Restaurante</span>
+        </button>
 
         {/* Logout */}
         <button

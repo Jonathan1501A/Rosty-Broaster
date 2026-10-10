@@ -203,7 +203,7 @@ export default function OrderDrawer({
                   : 'Pedido Para Llevar'}
               </h2>
               <p style={{ fontSize: '0.8rem', color: '#fbeee0', margin: 0 }}>
-                Selecciona los platos del menú oficial de Rosty Broaster
+                Selecciona los platos y bebidas del catálogo
               </p>
             </div>
           </div>

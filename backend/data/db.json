@@ -1,0 +1,947 @@
+{
+  "tenants": [
+    {
+      "id": "rosty-broaster",
+      "nombre": "ROSTY Broaster",
+      "slogan": "El Original V. - El mejor pollo al estilo americano",
+      "logoEmoji": "🐔",
+      "colores": {
+        "primario": "#e27329",
+        "secundario": "#ffcc00",
+        "fondo": "#1f1109",
+        "superficie": "#3d2314"
+      },
+      "numeroMesas": 14,
+      "telefono": "3227801140",
+      "direccion": "Calle 5 #10-20",
+      "whatsappDomiciliario": "3227801140",
+      "menu": {
+        "Pollo Broaster 🍗": [
+          {
+            "id": 101,
+            "name": "1/4 Pollo + Yuca + Arepa",
+            "price": 11000,
+            "desc": "Presa tradicional crujiente con porción de yuca y arepa."
+          },
+          {
+            "id": 102,
+            "name": "1/2 Pollo + Yuca + Arepa",
+            "price": 21000,
+            "desc": "Medio pollo apanado estilo americano con yuca y arepa."
+          },
+          {
+            "id": 103,
+            "name": "1 Pollo + Yuca + Arepa",
+            "price": 38000,
+            "desc": "Pollo entero (8 presas) apanado con yuca y arepas."
+          }
+        ],
+        "Combos Broaster 🧺": [
+          {
+            "id": 104,
+            "name": "Personal (1/4 Pollo + Acompañamientos + Bebida 350)",
+            "price": 16000,
+            "desc": "1/4 Pollo + Yuca + Arepa + Patacón + Papa Francesa + Bebida 350ml."
+          },
+          {
+            "id": 105,
+            "name": "Combo 3 (1/2 Pollo + Acompañamientos)",
+            "price": 24000,
+            "desc": "1/2 Pollo + Yuca + Arepa + Patacón + Papa Francesa."
+          },
+          {
+            "id": 106,
+            "name": "Combo 1 (1 Pollo + Acompañamientos)",
+            "price": 47000,
+            "desc": "1 Pollo + Yuca + Arepa + Patacón + Papa Francesa."
+          },
+          {
+            "id": 107,
+            "name": "Combo 2 (1 Pollo + Acompañamientos + Bebida 1.5L)",
+            "price": 52000,
+            "desc": "1 Pollo + Yuca + Arepa + Patacón + Papa Francesa + Bebida 1.5L."
+          },
+          {
+            "id": 108,
+            "name": "Familiar (1 ½ Pollo + Acompañamientos + Bebida 1.5L)",
+            "price": 71000,
+            "desc": "1 ½ Pollo + Yuca + Arepa + Patacón + Papa Francesa + Bebida 1.5L."
+          },
+          {
+            "id": 109,
+            "name": "Super Familiar (2 Pollos + Acompañamientos + Bebida 2.5L)",
+            "price": 96000,
+            "desc": "2 Pollos + Yuca + Arepa + Patacón + Papa Francesa + Bebida 2.5L."
+          }
+        ],
+        "Arroz Paisa Personales 🇨🇴": [
+          {
+            "id": 201,
+            "name": "Paisa Sencillo Personal (800gr)",
+            "price": 21000,
+            "desc": "800gr Arroz + Pollo + Plátano + Chicharrón + Maíz tierno."
+          },
+          {
+            "id": 202,
+            "name": "Paisa Ranchero Personal (800gr)",
+            "price": 23000,
+            "desc": "800gr Arroz + Pollo + Plátano + Chicharrón + Maíz + Chorizo y Salchicha."
+          },
+          {
+            "id": 203,
+            "name": "Paisa Multicarnes Personal (800gr)",
+            "price": 27000,
+            "desc": "800gr Arroz + Pollo + Plátano + Chicharrón + Maíz + Chorizo + Salchicha + Cerdo y Costilla."
+          }
+        ],
+        "Combos Arroz Paisa 🍱": [
+          {
+            "id": 211,
+            "name": "Combos Para Dos - Sencillo",
+            "price": 35000,
+            "desc": "800gr Arroz Paisa Sencillo + 1/4 Pollo + Papa Francesa."
+          },
+          {
+            "id": 212,
+            "name": "Combos Para Dos - Ranchero",
+            "price": 38000,
+            "desc": "800gr Arroz Paisa Ranchero + 1/4 Pollo + Papa Francesa."
+          },
+          {
+            "id": 213,
+            "name": "Combos Para Dos - Multicarne",
+            "price": 41000,
+            "desc": "800gr Arroz Paisa Multicarne + 1/4 Pollo + Papa Francesa."
+          },
+          {
+            "id": 221,
+            "name": "Combos Para Cuatro - Sencillo",
+            "price": 52000,
+            "desc": "1200gr Arroz Paisa Sencillo + 1/2 Pollo + Papa Francesa."
+          },
+          {
+            "id": 222,
+            "name": "Combos Para Cuatro - Ranchero",
+            "price": 55000,
+            "desc": "1200gr Arroz Paisa Ranchero + 1/2 Pollo + Papa Francesa."
+          },
+          {
+            "id": 223,
+            "name": "Combos Para Cuatro - Multicarne",
+            "price": 58000,
+            "desc": "1200gr Arroz Paisa Multicarne + 1/2 Pollo + Papa Francesa."
+          },
+          {
+            "id": 231,
+            "name": "Combos Familiares - Sencillo",
+            "price": 64000,
+            "desc": "1500gr Arroz Paisa Sencillo + 1/2 Pollo + Papa Francesa + Gaseosa 1.5L."
+          },
+          {
+            "id": 232,
+            "name": "Combos Familiares - Ranchero",
+            "price": 67000,
+            "desc": "1500gr Arroz Paisa Ranchero + 1/2 Pollo + Papa Francesa + Gaseosa 1.5L."
+          },
+          {
+            "id": 233,
+            "name": "Combos Familiares - Multicarne",
+            "price": 70000,
+            "desc": "1500gr Arroz Paisa Multicarne + 1/2 Pollo + Papa Francesa + Gaseosa 1.5L."
+          }
+        ],
+        "Platos a la Carta 🥩": [
+          {
+            "id": 301,
+            "name": "Bandeja Con Pollo",
+            "price": 20000,
+            "desc": "Arroz + Ensalada + Patacón + Papas a la francesa."
+          },
+          {
+            "id": 302,
+            "name": "Arroz Con Pollo",
+            "price": 21000,
+            "desc": "Delicioso arroz con pollo tradicional + Patacón + Yuca + Papas a la francesa."
+          },
+          {
+            "id": 303,
+            "name": "Pechuga a la Plancha",
+            "price": 32000,
+            "desc": "Arroz + Ensalada + Patacón + Papas a la francesa."
+          },
+          {
+            "id": 304,
+            "name": "Pechuga Gratinada",
+            "price": 33000,
+            "desc": "Bañada en queso gratinado + Arroz + Ensalada + Patacón + Papas francesas."
+          },
+          {
+            "id": 305,
+            "name": "Pechuga En Champiñones",
+            "price": 35000,
+            "desc": "En salsa cremosa de champiñones + Arroz + Ensalada + Patacón + Papas."
+          },
+          {
+            "id": 306,
+            "name": "Pechuga En Hawaiana",
+            "price": 35000,
+            "desc": "Con piña caramelizada y jamón + Arroz + Ensalada + Patacón + Papas."
+          },
+          {
+            "id": 307,
+            "name": "Churrasco",
+            "price": 32000,
+            "desc": "Corte de carne tierno a la plancha + Arroz + Ensalada + Patacón + Papas."
+          },
+          {
+            "id": 308,
+            "name": "Costillas BBQ",
+            "price": 32000,
+            "desc": "Costillitas tiernas glaseadas en BBQ + Arroz + Ensalada + Patacón + Papas."
+          },
+          {
+            "id": 309,
+            "name": "Costillas Cerdo",
+            "price": 32000,
+            "desc": "Costillitas de cerdo doradas + Arroz + Ensalada + Patacón + Papas."
+          },
+          {
+            "id": 310,
+            "name": "Mojarra Frita",
+            "price": 35000,
+            "desc": "Mojarra dorada crujiente + Arroz + Ensalada + Patacón + Papas a la francesa."
+          }
+        ],
+        "Chow Fan (Arroz Chino) 🇨🇳": [
+          {
+            "id": 401,
+            "name": "1/2 Especial (Pollo + Jamón + Cerdo + Camarón)",
+            "price": 21000,
+            "desc": "Salteado al wok tradicional con raíces chinas y carnes selectas."
+          },
+          {
+            "id": 402,
+            "name": "1 Especial (Pollo + Jamón + Cerdo + Camarón)",
+            "price": 38000,
+            "desc": "Porción entera al wok para compartir con carnes y camarón."
+          },
+          {
+            "id": 403,
+            "name": "Valenciana (1000 gr Arroz + 1/2 Pollo)",
+            "price": 45000,
+            "desc": "1000gr Arroz especial al wok acompañado de 1/2 pollo broaster."
+          },
+          {
+            "id": 404,
+            "name": "Valenciana Con Costilla (1000 gr + 7 Costillitas)",
+            "price": 47000,
+            "desc": "1000gr Arroz especial con 7 costillitas caramelizadas."
+          },
+          {
+            "id": 405,
+            "name": "Combo 1 Chow Fan (400 gr + 1/4 Pollo)",
+            "price": 25000,
+            "desc": "400gr Arroz especial + 1/4 Pollo broaster."
+          },
+          {
+            "id": 406,
+            "name": "Combo 2 Chow Fan (400 gr + Costillas)",
+            "price": 26000,
+            "desc": "400gr Arroz especial + Costillas."
+          },
+          {
+            "id": 407,
+            "name": "Combo 3 Chow Fan (400 gr + 1/4 Pollo + Costillas)",
+            "price": 28000,
+            "desc": "400gr Arroz especial + 1/4 Pollo + Costillas."
+          }
+        ],
+        "Porciones & Adicionales 🍟": [
+          {
+            "id": 501,
+            "name": "Porción de Papa Francesa",
+            "price": 6000,
+            "desc": "Papas fritas crocantes con sal marina."
+          },
+          {
+            "id": 502,
+            "name": "Porción de Patacón o Arepa",
+            "price": 6000,
+            "desc": "Patacones crujientes o arepas de la casa."
+          },
+          {
+            "id": 503,
+            "name": "Porción de Ensalada o Arroz",
+            "price": 4000,
+            "desc": "Ensalada fresca de la casa o porción de arroz."
+          },
+          {
+            "id": 504,
+            "name": "Porción de Lumpia",
+            "price": 3000,
+            "desc": "Rollito primavera crocante relleno de vegetales."
+          }
+        ],
+        "Jugos Naturales 🥤": [
+          {
+            "id": 601,
+            "name": "Jugo Natural en Agua",
+            "price": 6000,
+            "desc": "Mango, Mora, Maracuyá, Guanábana, Lulo, Limonada, Fresa o Frutos Rojos."
+          },
+          {
+            "id": 602,
+            "name": "Jugo Natural en Leche",
+            "price": 7000,
+            "desc": "Mango, Mora, Maracuyá, Guanábana, Lulo, Fresa o Frutos Rojos en leche cremosa."
+          }
+        ],
+        "Bebidas & Gaseosas 🧊": [
+          {
+            "id": 701,
+            "name": "Gaseosa Personal 350ml",
+            "price": 3500,
+            "desc": "Coca-Cola, Postobón, Colombiana, Manzana o Sprite."
+          },
+          {
+            "id": 702,
+            "name": "Gaseosa 400ml / Litro",
+            "price": 5000,
+            "desc": "Presentación individual grande."
+          },
+          {
+            "id": 703,
+            "name": "Gaseosa Familiar 1.5L",
+            "price": 7000,
+            "desc": "Familiar para compartir en mesa o domicilio."
+          },
+          {
+            "id": 704,
+            "name": "Gaseosa Mega 2.5L / 3L",
+            "price": 10000,
+            "desc": "Para combos familiares grandes."
+          },
+          {
+            "id": 705,
+            "name": "Cerveza Nacional",
+            "price": 5000,
+            "desc": "Poker, Águila, Club Colombia."
+          }
+        ]
+      },
+      "tables": [
+        {
+          "id": 1,
+          "numero": 1,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 2,
+          "numero": 2,
+          "capacidad": 4,
+          "estado": "ocupada",
+          "apertura": "2026-10-10T23:21:51.317Z",
+          "pedidoActual": [
+            {
+              "id": 103,
+              "name": "1 Pollo + Yuca + Arepa",
+              "price": 38000,
+              "cantidad": 8,
+              "completado": false
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "numero": 3,
+          "capacidad": 4,
+          "estado": "ocupada",
+          "apertura": "2026-10-10T22:53:12.242Z",
+          "pedidoActual": [
+            {
+              "id": 103,
+              "name": "1 Pollo + Yuca + Arepa",
+              "price": 38000,
+              "cantidad": 1
+            },
+            {
+              "id": 703,
+              "name": "Gaseosa Familiar 1.5L",
+              "price": 7000,
+              "cantidad": 1
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "numero": 4,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 5,
+          "numero": 5,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 6,
+          "numero": 6,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 7,
+          "numero": 7,
+          "capacidad": 4,
+          "estado": "ocupada",
+          "apertura": null,
+          "pedidoActual": [
+            {
+              "id": 405,
+              "name": "Combo 1 Chow Fan (400 gr + 1/4 Pollo)",
+              "price": 25000,
+              "cantidad": 1
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "numero": 8,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 9,
+          "numero": 9,
+          "capacidad": 4,
+          "estado": "cuenta",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 10,
+          "numero": 10,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 11,
+          "numero": 11,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 12,
+          "numero": 12,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 13,
+          "numero": 13,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 14,
+          "numero": 14,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        }
+      ],
+      "orders": [
+        {
+          "id": "ORD-1317",
+          "empresaId": "rosty-broaster",
+          "tipo": "dine_in",
+          "destino": "Mesa 2",
+          "cliente": "Salón",
+          "datosExtra": "Salón",
+          "items": [
+            {
+              "id": 103,
+              "name": "1 Pollo + Yuca + Arepa",
+              "price": 38000,
+              "cantidad": 8,
+              "completado": false
+            }
+          ],
+          "total": 304000,
+          "estado": "En preparación",
+          "createdAt": "2026-10-10T23:21:51.317Z",
+          "minutos": 47,
+          "limite": 15
+        },
+        {
+          "id": "ORD-201",
+          "empresaId": "rosty-broaster",
+          "tipo": "dine_in",
+          "destino": "Mesa 3",
+          "cliente": "Salón",
+          "datosExtra": "Puestos: 4",
+          "items": [
+            {
+              "id": 103,
+              "name": "1 Pollo + Yuca + Arepa",
+              "price": 38000,
+              "cantidad": 1,
+              "completado": true
+            },
+            {
+              "id": 703,
+              "name": "Gaseosa Familiar 1.5L",
+              "price": 7000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ],
+          "total": 45000,
+          "estado": "En preparación",
+          "createdAt": "2026-10-10T23:08:12.244Z",
+          "minutos": 62,
+          "limite": 15
+        },
+        {
+          "id": "ORD-202",
+          "empresaId": "rosty-broaster",
+          "tipo": "delivery",
+          "destino": "Calle 5 #10-20",
+          "cliente": "Diego Arévalo",
+          "datosExtra": "Tel: 3227801140",
+          "items": [
+            {
+              "id": 405,
+              "name": "Combo 1 Chow Fan (400 gr + 1/4 Pollo)",
+              "price": 25000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ],
+          "total": 25000,
+          "estado": "Listo",
+          "createdAt": "2026-10-10T23:01:12.244Z",
+          "minutos": 17,
+          "limite": 20
+        },
+        {
+          "id": "ORD-203",
+          "empresaId": "rosty-broaster",
+          "tipo": "takeout",
+          "destino": "Recoge en Barra",
+          "cliente": "Luz Marina",
+          "datosExtra": "Para llevar",
+          "items": [
+            {
+              "id": 103,
+              "name": "1 Pollo + Yuca + Arepa",
+              "price": 38000,
+              "cantidad": 1,
+              "completado": true
+            }
+          ],
+          "total": 38000,
+          "estado": "Listo",
+          "createdAt": "2026-10-10T23:15:12.244Z",
+          "minutos": 3,
+          "limite": 15
+        }
+      ],
+      "salesHistory": [
+        {
+          "id": "REC-1001",
+          "ordenId": "MESA-4",
+          "destino": "Mesa 4",
+          "cliente": "Salón",
+          "total": 52000,
+          "metodoPago": "efectivo",
+          "montoRecibido": 60000,
+          "cambio": 8000,
+          "despachadoPor": "waiter",
+          "timestamp": "2026-10-10T22:33:12.244Z"
+        },
+        {
+          "id": "REC-1002",
+          "ordenId": "DOM-88",
+          "destino": "Carrera 7 #12-30",
+          "cliente": "Carlos Méndez",
+          "total": 38000,
+          "metodoPago": "nequi",
+          "montoRecibido": 38000,
+          "cambio": 0,
+          "despachadoPor": "waiter",
+          "timestamp": "2026-10-10T21:53:12.244Z"
+        }
+      ],
+      "closures": []
+    },
+    {
+      "id": "pizzeria-napoles",
+      "nombre": "Pizzería Nápoles",
+      "slogan": "Auténtica pizza al horno de leña y pastas artesanales",
+      "logoEmoji": "🍕",
+      "colores": {
+        "primario": "#d32f2f",
+        "secundario": "#ffcc00",
+        "fondo": "#1a1008",
+        "superficie": "#2b1a10"
+      },
+      "numeroMesas": 10,
+      "telefono": "3109876543",
+      "direccion": "Carrera 15 #80-10",
+      "whatsappDomiciliario": "3109876543",
+      "menu": {
+        "Pizzas Tradicionales 🍕": [
+          {
+            "id": 801,
+            "name": "Pizza Margarita Personal",
+            "price": 16000,
+            "desc": "Salsa pomodoro napolitana, mozzarella fresca, albahaca y aceite de oliva virgen extra."
+          },
+          {
+            "id": 802,
+            "name": "Pizza Pepperoni Mediana",
+            "price": 28000,
+            "desc": "Generosa capa de pepperoni americano crujiente con queso mozzarella fundido."
+          },
+          {
+            "id": 803,
+            "name": "Pizza Hawaiana Familiar",
+            "price": 38000,
+            "desc": "Jamón artesanal seleccionado, piña caramelizada al horno y doble queso."
+          },
+          {
+            "id": 804,
+            "name": "Pizza Cuatro Quesos Especial",
+            "price": 42000,
+            "desc": "Mozzarella, parmesano reggiano, queso azul y provolone fundido."
+          }
+        ],
+        "Pizzas Especiales & Carnes 🥩": [
+          {
+            "id": 810,
+            "name": "Pizza Carnes de la Casa (Familiar)",
+            "price": 46000,
+            "desc": "Tocineta crocante, carne molida especiada, pepperoni, jamón y maíz tierno."
+          },
+          {
+            "id": 811,
+            "name": "Pizza Pollo con Champiñones",
+            "price": 36000,
+            "desc": "Pechuga desmechada al vino blanco, champiñones salteados y mozzarella."
+          },
+          {
+            "id": 812,
+            "name": "Pizza Mexicana Picante",
+            "price": 39000,
+            "desc": "Carne picada, jalapeños, nachos triturados, frijol refrito y queso."
+          }
+        ],
+        "Pastas & Lasagnas 🍝": [
+          {
+            "id": 820,
+            "name": "Lasagna Mixta al Horno",
+            "price": 24000,
+            "desc": "Capas de pasta artesanal con carne bolognesa, pollo desmechado y gratinado de queso."
+          },
+          {
+            "id": 821,
+            "name": "Spaghetti a la Carbonara",
+            "price": 22000,
+            "desc": "Tocineta dorada, crema de leche suave, queso parmesano y pimienta negra recién molida."
+          },
+          {
+            "id": 822,
+            "name": "Fettuccine Alfredo con Pollo",
+            "price": 25000,
+            "desc": "Salsa Alfredo mantecosa con tiras de pechuga a la plancha y perejil fresco."
+          }
+        ],
+        "Entradas & Bebidas 🥤": [
+          {
+            "id": 830,
+            "name": "Pan de Ajo con Queso (4 unidades)",
+            "price": 9000,
+            "desc": "Baguette tostado con mantequilla de ajo, orégano y queso derretido."
+          },
+          {
+            "id": 831,
+            "name": "Gaseosa 1.5L Familiar",
+            "price": 7000,
+            "desc": "Coca-Cola, Postobón o Sprite fría."
+          },
+          {
+            "id": 832,
+            "name": "Cerveza Club Colombia / Corona",
+            "price": 6500,
+            "desc": "Botella fría de cerveza premium."
+          }
+        ]
+      },
+      "tables": [
+        {
+          "id": 1,
+          "numero": 1,
+          "capacidad": 4,
+          "estado": "ocupada",
+          "apertura": "2026-10-10T23:33:38.333Z",
+          "pedidoActual": [
+            {
+              "id": 801,
+              "name": "Pizza Margarita Personal",
+              "price": 16000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "numero": 2,
+          "capacidad": 4,
+          "estado": "ocupada",
+          "apertura": "2026-10-10T23:03:12.244Z",
+          "pedidoActual": [
+            {
+              "id": 802,
+              "name": "Pizza Pepperoni Mediana",
+              "price": 28000,
+              "cantidad": 1
+            },
+            {
+              "id": 831,
+              "name": "Gaseosa 1.5L Familiar",
+              "price": 7000,
+              "cantidad": 1
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "numero": 3,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 4,
+          "numero": 4,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 5,
+          "numero": 5,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 6,
+          "numero": 6,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 7,
+          "numero": 7,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 8,
+          "numero": 8,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 9,
+          "numero": 9,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        },
+        {
+          "id": 10,
+          "numero": 10,
+          "capacidad": 4,
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
+        }
+      ],
+      "orders": [
+        {
+          "id": "ORD-8332",
+          "empresaId": "pizzeria-napoles",
+          "tipo": "dine_in",
+          "destino": "Mesa 1",
+          "cliente": "Salón",
+          "datosExtra": "",
+          "items": [
+            {
+              "id": 801,
+              "name": "Pizza Margarita Personal",
+              "price": 16000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ],
+          "total": 16000,
+          "estado": "En preparación",
+          "createdAt": "2026-10-10T23:33:38.332Z",
+          "minutos": 0,
+          "limite": 15
+        },
+        {
+          "id": "PIZ-101",
+          "empresaId": "pizzeria-napoles",
+          "tipo": "dine_in",
+          "destino": "Mesa 2",
+          "cliente": "Salón",
+          "datosExtra": "Mesa 2",
+          "items": [
+            {
+              "id": 802,
+              "name": "Pizza Pepperoni Mediana",
+              "price": 28000,
+              "cantidad": 1,
+              "completado": true
+            },
+            {
+              "id": 831,
+              "name": "Gaseosa 1.5L Familiar",
+              "price": 7000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ],
+          "total": 35000,
+          "estado": "En preparación",
+          "createdAt": "2026-10-10T23:10:12.244Z",
+          "minutos": 60,
+          "limite": 20
+        },
+        {
+          "id": "PIZ-102",
+          "empresaId": "pizzeria-napoles",
+          "tipo": "delivery",
+          "destino": "Av. Circunvalar #45-12",
+          "cliente": "Andrea Torres",
+          "datosExtra": "Tel: 3105559876",
+          "items": [
+            {
+              "id": 810,
+              "name": "Pizza Carnes de la Casa (Familiar)",
+              "price": 46000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ],
+          "total": 46000,
+          "estado": "En preparación",
+          "createdAt": "2026-10-10T23:06:12.244Z",
+          "minutos": 64,
+          "limite": 25
+        }
+      ],
+      "salesHistory": [
+        {
+          "id": "REC-P01",
+          "ordenId": "MESA-5",
+          "destino": "Mesa 5",
+          "cliente": "Salón",
+          "total": 42000,
+          "metodoPago": "tarjeta",
+          "montoRecibido": 42000,
+          "cambio": 0,
+          "despachadoPor": "waiter",
+          "timestamp": "2026-10-10T22:18:12.244Z"
+        }
+      ],
+      "closures": []
+    }
+  ],
+  "users": [
+    {
+      "id": "u-rosty-waiter",
+      "empresaId": "rosty-broaster",
+      "username": "waiter",
+      "pinHash": "$2b$10$COBmKcLmN3LocJ6AyNDzSeq1hSNTE5wKN3TMp3uXaI2QmAmIO/UEK",
+      "name": "Mesero Salón & Caja",
+      "role": "waiter"
+    },
+    {
+      "id": "u-rosty-chef",
+      "empresaId": "rosty-broaster",
+      "username": "chef",
+      "pinHash": "$2b$10$JkqIJ9lGKW7iQEDChmr8buasXaLt/j28Nb0hq/3aBydSFo4T5ZtI.",
+      "name": "Jefe de Cocina (KDS)",
+      "role": "chef"
+    },
+    {
+      "id": "u-rosty-admin",
+      "empresaId": "rosty-broaster",
+      "username": "admin",
+      "pinHash": "$2b$10$zVU.JZJu1b7MMsyrB1z.iONCR7nScfn0YrxM8tow.zKEAeMuThmPG",
+      "name": "Administración & Auditoría",
+      "role": "admin"
+    },
+    {
+      "id": "u-pizzeria-waiter",
+      "empresaId": "pizzeria-napoles",
+      "username": "waiter",
+      "pinHash": "$2b$10$h.eTnS62Kx3/1eH2Hf6BW.zFBvD8TH4EoG8gY.ZoKeC3tw.k/OCY6",
+      "name": "Mesero Pizzería",
+      "role": "waiter"
+    },
+    {
+      "id": "u-pizzeria-chef",
+      "empresaId": "pizzeria-napoles",
+      "username": "chef",
+      "pinHash": "$2b$10$c5rri1fR6QdnSkBamqh4n.lMnQIioo50zIjDTHx16e1CfOPrPN9Ya",
+      "name": "Maestro Pizzero (KDS)",
+      "role": "chef"
+    },
+    {
+      "id": "u-pizzeria-admin",
+      "empresaId": "pizzeria-napoles",
+      "username": "admin",
+      "pinHash": "$2b$10$Bbv03ZoFf7FIFJTaZCKIWuq3WXfZjC9P3cVxp6RVoyxPRjLLdmsuW",
+      "name": "Administración Pizzería",
+      "role": "admin"
+    }
+  ]
+}

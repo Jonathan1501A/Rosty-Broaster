@@ -183,7 +183,7 @@ export default function TablesView({
           const isOccupied = mesa.estado === 'ocupada';
           const isBill = mesa.estado === 'cuenta';
 
-          const statusColor = isFree ? '#2e7d32' : isOccupied ? '#e27329' : '#0288d1';
+          const statusColor = isFree ? '#2e7d32' : isOccupied ? 'var(--brand-primary, #e27329)' : '#0288d1';
           const statusText = isFree ? 'Disponible' : isOccupied ? 'Ocupada' : 'Cuenta';
 
           const tableTotal = mesa.pedidoActual?.reduce((sum, item) => sum + item.price * item.cantidad, 0) || 0;
@@ -194,15 +194,15 @@ export default function TablesView({
               key={mesa.id}
               className="animate-fade-in"
               style={{
-                backgroundColor: '#3d2314',
-                border: `2px solid ${isOccupied ? '#e27329' : isBill ? '#0288d1' : '#5c351e'}`,
+                backgroundColor: 'var(--bg-surface, #3d2314)',
+                border: `2px solid ${isOccupied ? 'var(--brand-primary, #e27329)' : isBill ? '#0288d1' : '#5c351e'}`,
                 borderRadius: '16px',
                 padding: '18px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 gap: '14px',
-                boxShadow: isOccupied ? '0 8px 24px rgba(226, 115, 41, 0.3)' : '0 4px 12px rgba(0,0,0,0.4)',
+                boxShadow: isOccupied ? '0 8px 24px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.4)',
                 transition: 'all 0.2s ease'
               }}
             >

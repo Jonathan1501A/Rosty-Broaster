@@ -9,15 +9,21 @@ import {
   ShieldCheck, 
   Store, 
   PlusCircle, 
-  Check, 
-  ChevronDown 
+  CheckCircle2,
+  Building2
 } from 'lucide-react';
 import { api } from '../services/api.js';
-import { DEFAULT_TENANT, applyTenantTheme } from '../data/tenantConfig.js';
+import { DEFAULT_TENANT, DEFAULT_PIZZERIA, INITIAL_TENANTS, applyTenantTheme } from '../data/tenantConfig.js';
 
 export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
-  const [tenants, setTenants] = useState([DEFAULT_TENANT]);
-  const [selectedTenantId, setSelectedTenantId] = useState(DEFAULT_TENANT.id);
+  const [tenants, setTenants] = useState(() => INITIAL_TENANTS);
+  const [selectedTenantId, setSelectedTenantId] = useState(() => {
+    try {
+      return localStorage.getItem('rosty_active_tenant_id') || DEFAULT_TENANT.id;
+    } catch {
+      return DEFAULT_TENANT.id;
+    }
+  });
   const [selectedRole, setSelectedRole] = useState('waiter');
   const [pin, setPin] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,35 +49,54 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
   });
   const [isCreatingTenant, setIsCreatingTenant] = useState(false);
 
-  // Cargar lista de restaurantes
+  // Cargar lista de restaurantes desde Backend
   useEffect(() => {
     const fetchTenants = async () => {
       try {
         const list = await api.getTenants();
         if (list && list.length > 0) {
           setTenants(list);
-          const activeId = localStorage.getItem('rosty_active_tenant_id') || list[0].id;
-          const found = list.find((t) => t.id === activeId) || list[0];
-          setSelectedTenantId(found.id);
-          applyTenantTheme(found);
+          const activeId = localStorage.getItem('rosty_active_tenant_id');
+          if (activeId && list.some((t) => t.id === activeId)) {
+            setSelectedTenantId(activeId);
+            const chosen = list.find((t) => t.id === activeId);
+            applyTenantTheme(chosen);
+          } else {
+            // Default first
+            applyTenantTheme(list[0]);
+          }
         }
       } catch (err) {
-        console.debug('Usando restaurantes locales:', err.message);
+        console.debug('Usando restaurantes locales preconfigurados:', err.message);
       }
     };
     fetchTenants();
   }, []);
 
-  const currentTenant = tenants.find((t) => t.id === selectedTenantId) || DEFAULT_TENANT;
+  const currentTenant = tenants.find((t) => t.id === selectedTenantId) || tenants[0] || DEFAULT_TENANT;
 
   // Cambiar de restaurante
   const handleSelectTenant = (tenantId) => {
     setSelectedTenantId(tenantId);
+    try {
+      localStorage.setItem('rosty_active_tenant_id', tenantId);
+    } catch (e) {}
     const chosen = tenants.find((t) => t.id === tenantId) || DEFAULT_TENANT;
     applyTenantTheme(chosen);
     setPin('');
     setErrorMsg('');
   };
+
+  // Claves de demostración específicas según el restaurante seleccionado
+  const demoPins = (() => {
+    if (selectedTenantId === 'pizzeria-napoles') {
+      return { waiter: 'pizza123', chef: 'cocina123', admin: 'admin123' };
+    }
+    if (selectedTenantId === 'rosty-broaster') {
+      return { waiter: 'rosty123', chef: 'cocina123', admin: 'admin123' };
+    }
+    return { waiter: '1234', chef: '1234', admin: 'admin123' };
+  })();
 
   const roles = [
     {
@@ -113,15 +138,25 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
       onLoginSuccess(data.user, data.empresa || currentTenant);
     } catch (err) {
       // Fallback local en caso de desconexión momentánea de backend
-      if (
-        (selectedRole === 'waiter' && (pin.trim() === 'rosty123' || pin.trim() === '1234')) ||
-        (selectedRole === 'chef' && (pin.trim() === 'cocina123' || pin.trim() === '5678')) ||
-        (selectedRole === 'admin' && (pin.trim() === 'admin123' || pin.trim() === '0000'))
-      ) {
+      const validPins = [
+        'rosty123', 
+        'pizza123', 
+        'cocina123', 
+        'admin123', 
+        '1234', 
+        '5678', 
+        '4321'
+      ];
+
+      if (validPins.includes(pin.trim())) {
         const fallbackUser = {
           id: `u-${selectedRole}-${selectedTenantId}`,
           username: selectedRole,
-          name: selectedRole === 'waiter' ? 'Mesero Salón' : selectedRole === 'chef' ? 'Jefe de Cocina' : `Admin ${currentTenant.nombre}`,
+          name: selectedRole === 'waiter' 
+            ? `Mesero ${currentTenant.nombre}` 
+            : selectedRole === 'chef' 
+            ? `Jefe Cocina ${currentTenant.nombre}` 
+            : `Admin ${currentTenant.nombre}`,
           role: selectedRole,
           empresaId: selectedTenantId
         };
@@ -129,7 +164,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         onLoginSuccess(fallbackUser, currentTenant);
         return;
       }
-      setErrorMsg(err.message || 'Código de acceso incorrecto para este restaurante.');
+      setErrorMsg(err.message || 'Código PIN incorrecto para este restaurante.');
     } finally {
       setIsLoading(false);
     }
@@ -152,10 +187,10 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
       const created = res.tenant;
       setTenants((prev) => [...prev, created]);
       setSelectedTenantId(created.id);
+      localStorage.setItem('rosty_active_tenant_id', created.id);
       applyTenantTheme(created);
       setShowNewTenantModal(false);
 
-      // Auto login con el admin creado
       if (res.adminUser) {
         onLoginSuccess(res.adminUser, created);
       }
@@ -180,47 +215,32 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(circle at 50% 30%, #3d2314 0%, #1f1109 100%)',
+        background: 'radial-gradient(circle at 50% 30%, var(--bg-surface, #3d2314) 0%, var(--bg-app, #1f1109) 100%)',
         padding: '24px',
         position: 'relative',
         overflow: 'hidden'
       }}
     >
-      {/* Luz ambiental cálida */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-10%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '500px',
-          height: '500px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(226, 115, 41, 0.25) 0%, transparent 70%)',
-          pointerEvents: 'none'
-        }}
-      />
-
       <div
         className="animate-fade-in"
         style={{
           width: '100%',
-          maxWidth: '520px',
-          backgroundColor: '#3d2314',
-          border: '3px solid #e27329',
+          maxWidth: '560px',
+          backgroundColor: 'var(--bg-surface, #3d2314)',
+          border: '3px solid var(--brand-primary, #e27329)',
           borderRadius: '24px',
           boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(226, 115, 41, 0.3)',
-          padding: '32px 28px',
+          padding: '28px 26px',
           position: 'relative',
           zIndex: 1
         }}
       >
-        {/* Selector de Empresa / Restaurante */}
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#ffcc00', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              🏢 Selecciona tu Restaurante / Empresa:
-            </label>
+        {/* Selector Visual de Restaurantes */}
+        <div style={{ marginBottom: '22px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span style={{ fontSize: '0.825rem', fontWeight: '900', color: '#ffcc00', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              🏢 ¿A cuál restaurante deseas ingresar?
+            </span>
             <button
               type="button"
               onClick={() => setShowNewTenantModal(true)}
@@ -236,63 +256,71 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                 cursor: 'pointer'
               }}
             >
-              <PlusCircle size={14} /> + Nuevo Restaurante
+              <PlusCircle size={14} /> + Nuevo
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+          {/* Tarjetas Grandes de Restaurantes */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {tenants.map((t) => {
               const isSelected = t.id === selectedTenantId;
               return (
-                <button
+                <div
                   key={t.id}
-                  type="button"
                   onClick={() => handleSelectTenant(t.id)}
                   style={{
-                    padding: '8px 12px',
-                    borderRadius: '12px',
-                    border: isSelected ? '2px solid #ffcc00' : '1px solid #5c351e',
-                    backgroundColor: isSelected ? '#e27329' : '#2b180d',
-                    color: '#fff',
-                    fontSize: '0.825rem',
-                    fontWeight: isSelected ? '900' : '700',
+                    padding: '12px 14px',
+                    borderRadius: '14px',
+                    border: isSelected ? '2.5px solid #ffcc00' : '1.5px solid #5c351e',
+                    backgroundColor: isSelected ? 'rgba(226, 115, 41, 0.25)' : '#26160c',
+                    boxShadow: isSelected ? '0 0 16px rgba(255, 204, 0, 0.35)' : 'none',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    whiteSpace: 'nowrap',
-                    cursor: 'pointer'
+                    gap: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  <span>{t.logoEmoji || '🍽️'}</span>
-                  <span>{t.nombre}</span>
-                </button>
+                  <span style={{ fontSize: '1.8rem' }}>{t.logoEmoji || '🍽️'}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: '900', fontSize: '0.9rem', color: isSelected ? '#ffcc00' : '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {t.nombre}
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: isSelected ? '#ffffff' : '#c4a48c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {t.slogan?.split('-')[0] || 'Restaurante'}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <CheckCircle2 size={18} color="#ffcc00" style={{ flexShrink: 0 }} />
+                  )}
+                </div>
               );
             })}
           </div>
         </div>
 
-        {/* Brand Header Dinámico */}
-        <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+        {/* Brand Header del Restaurante Activo */}
+        <div style={{ textAlign: 'center', marginBottom: '20px', padding: '12px', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: '16px', border: '1px solid #52301c' }}>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '74px',
-              height: '74px',
+              width: '64px',
+              height: '64px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #ffcc00 0%, #e27329 100%)',
-              border: '3px solid #ffcc00',
-              boxShadow: '0 8px 24px rgba(226, 115, 41, 0.5)',
-              marginBottom: '10px',
-              fontSize: '36px'
+              background: 'linear-gradient(135deg, #ffcc00 0%, var(--brand-primary, #e27329) 100%)',
+              border: '2.5px solid #ffcc00',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.5)',
+              marginBottom: '8px',
+              fontSize: '32px'
             }}
           >
-            {currentTenant.logoEmoji || '🐔'}
+            {currentTenant.logoEmoji || '🍽️'}
           </div>
           <h1
             style={{
-              fontSize: '1.9rem',
+              fontSize: '1.7rem',
               fontWeight: '900',
               letterSpacing: '-0.5px',
               color: '#ffcc00',
@@ -301,15 +329,15 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
           >
             {currentTenant.nombre}
           </h1>
-          <p style={{ fontSize: '0.8rem', color: '#e27329', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '800' }}>
-            {currentTenant.slogan || 'SISTEMA DE PEDIDOS & KDS'}
+          <p style={{ fontSize: '0.78rem', color: '#fbeee0', marginTop: '2px', fontWeight: '700' }}>
+            {currentTenant.slogan || 'SISTEMA DE PEDIDOS & COCINA'}
           </p>
         </div>
 
         {/* Role Selector Pills */}
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '18px' }}>
           <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#ffcc00', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Perfil de Trabajo en este Restaurante:
+            Selecciona tu Perfil de Trabajo:
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
             {roles.map((r) => {
@@ -322,17 +350,17 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                   onClick={() => { setSelectedRole(r.id); setErrorMsg(''); }}
                   style={{
                     flexDirection: 'column',
-                    padding: '12px 6px',
+                    padding: '10px 4px',
                     borderRadius: '12px',
-                    backgroundColor: isSelected ? 'rgba(226, 115, 41, 0.3)' : '#2b180d',
+                    backgroundColor: isSelected ? 'rgba(226, 115, 41, 0.35)' : '#2b180d',
                     border: isSelected ? `2.5px solid ${r.color}` : '1.5px solid #52301c',
                     color: isSelected ? '#ffcc00' : '#c4a48c',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <Icon size={22} color={isSelected ? r.color : '#c4a48c'} />
-                  <span style={{ fontSize: '0.78rem', marginTop: '6px', fontWeight: isSelected ? '900' : '600' }}>
+                  <Icon size={20} color={isSelected ? r.color : '#c4a48c'} />
+                  <span style={{ fontSize: '0.78rem', marginTop: '5px', fontWeight: isSelected ? '900' : '600' }}>
                     {r.title.split('/')[0]}
                   </span>
                 </button>
@@ -343,10 +371,10 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
 
         {/* Formulario */}
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '18px' }}>
-            <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: '800', color: '#fbeee0', marginBottom: '8px', textTransform: 'uppercase' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: '800', color: '#fbeee0', marginBottom: '6px', textTransform: 'uppercase' }}>
               <span>Código PIN de Personal:</span>
-              <span style={{ color: '#ffcc00', textTransform: 'none', fontWeight: '700' }}>Exclusivo por empresa</span>
+              <span style={{ color: '#ffcc00', textTransform: 'none', fontWeight: '700' }}>Acceso seguro</span>
             </label>
 
             <div style={{ position: 'relative' }}>
@@ -358,7 +386,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                 autoFocus
                 style={{
                   width: '100%',
-                  padding: '13px 44px 13px 16px',
+                  padding: '12px 44px 12px 16px',
                   borderRadius: '12px',
                   backgroundColor: '#2b180d',
                   border: '2px solid #52301c',
@@ -399,7 +427,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                 padding: '10px 14px',
                 color: '#ff8a80',
                 fontSize: '0.825rem',
-                marginBottom: '16px',
+                marginBottom: '14px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
@@ -418,13 +446,13 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
               width: '100%',
               padding: '13px',
               borderRadius: '12px',
-              backgroundColor: '#e27329',
+              backgroundColor: 'var(--brand-primary, #e27329)',
               color: '#fff',
-              fontSize: '1rem',
+              fontSize: '0.95rem',
               fontWeight: '900',
               border: 'none',
-              boxShadow: '0 8px 20px rgba(226, 115, 41, 0.5)',
-              marginBottom: '18px',
+              boxShadow: '0 8px 20px rgba(0,0,0,0.5)',
+              marginBottom: '16px',
               cursor: isLoading ? 'not-allowed' : 'pointer'
             }}
           >
@@ -438,32 +466,32 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
           </button>
         </form>
 
-        {/* Accesos rápidos de prueba */}
-        <div style={{ backgroundColor: '#2b180d', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #52301c', marginBottom: '16px' }}>
+        {/* Accesos rápidos de prueba específicos del restaurante */}
+        <div style={{ backgroundColor: '#2b180d', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #52301c', marginBottom: '14px' }}>
           <div style={{ fontSize: '0.75rem', color: '#ffcc00', marginBottom: '6px', fontWeight: '800', textTransform: 'uppercase' }}>
-            💡 Claves de acceso para demostración:
+            💡 Claves demostración para {currentTenant.nombre}:
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             <button
               type="button"
-              onClick={() => handleQuickFill('waiter', 'rosty123')}
-              style={{ padding: '5px 9px', backgroundColor: '#3d2314', color: '#ffcc00', fontSize: '0.75rem', border: '1px solid #e27329', cursor: 'pointer' }}
+              onClick={() => handleQuickFill('waiter', demoPins.waiter)}
+              style={{ padding: '5px 9px', backgroundColor: '#3d2314', color: '#ffcc00', fontSize: '0.75rem', border: '1px solid #e27329', cursor: 'pointer', borderRadius: '6px' }}
             >
-              Mesero: <strong style={{ color: '#fff' }}>rosty123</strong>
+              Mesero: <strong style={{ color: '#fff' }}>{demoPins.waiter}</strong>
             </button>
             <button
               type="button"
-              onClick={() => handleQuickFill('chef', 'cocina123')}
-              style={{ padding: '5px 9px', backgroundColor: '#3d2314', color: '#a5d6a7', fontSize: '0.75rem', border: '1px solid #2e7d32', cursor: 'pointer' }}
+              onClick={() => handleQuickFill('chef', demoPins.chef)}
+              style={{ padding: '5px 9px', backgroundColor: '#3d2314', color: '#a5d6a7', fontSize: '0.75rem', border: '1px solid #2e7d32', cursor: 'pointer', borderRadius: '6px' }}
             >
-              Cocina: <strong style={{ color: '#fff' }}>cocina123</strong>
+              Cocina: <strong style={{ color: '#fff' }}>{demoPins.chef}</strong>
             </button>
             <button
               type="button"
-              onClick={() => handleQuickFill('admin', 'admin123')}
-              style={{ padding: '5px 9px', backgroundColor: '#3d2314', color: '#4fc3f7', fontSize: '0.75rem', border: '1px solid #0288d1', cursor: 'pointer' }}
+              onClick={() => handleQuickFill('admin', demoPins.admin)}
+              style={{ padding: '5px 9px', backgroundColor: '#3d2314', color: '#4fc3f7', fontSize: '0.75rem', border: '1px solid #0288d1', cursor: 'pointer', borderRadius: '6px' }}
             >
-              Admin: <strong style={{ color: '#fff' }}>admin123</strong>
+              Admin: <strong style={{ color: '#fff' }}>{demoPins.admin}</strong>
             </button>
           </div>
         </div>
@@ -472,7 +500,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         <div
           style={{
             borderTop: '1px solid #52301c',
-            paddingTop: '12px',
+            paddingTop: '10px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -482,7 +510,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <ShieldCheck size={16} color="#2e7d32" />
-            <span>Multi-Tenant Seguro</span>
+            <span>Datos 100% aislados por restaurante</span>
           </div>
 
           <button
@@ -552,7 +580,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                 <input
                   type="text"
                   required
-                  placeholder="Ej: Pizzería Roma, Burger House"
+                  placeholder="Ej: Pizzería Roma, Taquería del Sol"
                   value={newTenantData.nombre}
                   onChange={(e) => setNewTenantData({ ...newTenantData, nombre: e.target.value })}
                   style={{ width: '100%', padding: '10px', borderRadius: '10px', backgroundColor: '#1f1109', border: '1.5px solid #5c351e', color: '#fff' }}
@@ -565,7 +593,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej: Las mejores hamburguesas artesanales"
+                  placeholder="Ej: La auténtica pizza italiana"
                   value={newTenantData.slogan}
                   onChange={(e) => setNewTenantData({ ...newTenantData, slogan: e.target.value })}
                   style={{ width: '100%', padding: '10px', borderRadius: '10px', backgroundColor: '#1f1109', border: '1.5px solid #5c351e', color: '#fff' }}

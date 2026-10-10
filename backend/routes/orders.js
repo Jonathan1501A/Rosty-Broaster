@@ -74,9 +74,9 @@ router.post('/', orderLimiter, (req, res) => {
 
   const io = req.app.get('io');
   if (io) {
-    io.emit('order:created', { tenantId, order: newOrder });
+    io.to(tenantId).emit('order:created', newOrder);
     if (tipo === 'dine_in' && mesaNumero) {
-      io.emit('tables:updated', { tenantId, tables: store.getTables(tenantId) });
+      io.to(tenantId).emit('tables:updated', store.getTables(tenantId));
     }
   }
 
@@ -107,7 +107,7 @@ router.patch('/:id/status', (req, res) => {
 
   const io = req.app.get('io');
   if (io) {
-    io.emit('order:updated', { tenantId, order: updatedOrder });
+    io.to(tenantId).emit('order:updated', updatedOrder);
   }
 
   res.json({
@@ -124,14 +124,15 @@ router.patch('/:id/items/:itemId/toggle', (req, res) => {
   const tenantId = getTenantId(req);
   const { id, itemId } = req.params;
 
-  const updatedOrder = store.toggleItemComplete(tenantId, id, Number(itemId));
+  const updatedOrder = (store.toggleOrderItem && store.toggleOrderItem(tenantId, id, Number(itemId))) || 
+                       (store.toggleItemComplete && store.toggleItemComplete(tenantId, id, Number(itemId)));
   if (!updatedOrder) {
     return res.status(404).json({ error: 'Comanda o ítem no encontrado.' });
   }
 
   const io = req.app.get('io');
   if (io) {
-    io.emit('order:updated', { tenantId, order: updatedOrder });
+    io.to(tenantId).emit('order:updated', updatedOrder);
   }
 
   res.json({

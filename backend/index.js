@@ -77,15 +77,35 @@ app.get('/', (req, res) => {
   res.send('🍗 ROSTY Broaster Backend API v1.0 - Producción Segura Activa');
 });
 
-// 4. Conexiones WebSocket en Tiempo Real
+// 4. Conexiones WebSocket en Tiempo Real con Aislamiento Estricto por Restaurante (Rooms)
 io.on('connection', (socket) => {
-  console.log(`⚡ Dispositivo conectado [ID: ${socket.id}]`);
+  const initialTenantId = socket.handshake.query?.tenantId || socket.handshake.auth?.tenantId || 'rosty-broaster';
+  socket.join(initialTenantId);
+  console.log(`⚡ Dispositivo conectado [ID: ${socket.id}] a la sala [${initialTenantId}]`);
 
-  // Enviar estado inicial al conectarse
+  // Enviar estado inicial exclusivo de ese restaurante
   socket.emit('initial:data', {
-    tables: store.getTables(),
-    orders: store.getOrders(),
-    stats: store.getStats()
+    tenantId: initialTenantId,
+    tables: store.getTables(initialTenantId),
+    orders: store.getOrders(initialTenantId),
+    stats: store.getStats(initialTenantId)
+  });
+
+  // Permitir al cliente cambiar o unirse a la sala de su restaurante
+  socket.on('join:tenant', (targetTenantId) => {
+    if (!targetTenantId) return;
+    // Salir de salas anteriores
+    for (const room of socket.rooms) {
+      if (room !== socket.id) socket.leave(room);
+    }
+    socket.join(targetTenantId);
+    console.log(`🔄 Dispositivo [${socket.id}] se unió exclusivamente a la sala [${targetTenantId}]`);
+    socket.emit('initial:data', {
+      tenantId: targetTenantId,
+      tables: store.getTables(targetTenantId),
+      orders: store.getOrders(targetTenantId),
+      stats: store.getStats(targetTenantId)
+    });
   });
 
   socket.on('disconnect', () => {
@@ -93,11 +113,13 @@ io.on('connection', (socket) => {
   });
 });
 
-// Temporizador automático de órdenes en cocina (cada 15 segundos)
+// Temporizador automático de órdenes en cocina aislado por restaurante (cada 15 segundos)
 setInterval(() => {
   const huboCambio = store.tickOrderTimers();
   if (huboCambio) {
-    io.emit('orders:timer_tick', store.getOrders());
+    for (const tenant of store.tenants) {
+      io.to(tenant.id).emit('orders:timer_tick', store.getOrders(tenant.id));
+    }
   }
 }, 15000);
 
