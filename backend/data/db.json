@@ -484,7 +484,7 @@
           "total": 11000,
           "estado": "En preparación",
           "createdAt": "2026-10-16T22:05:02.718Z",
-          "minutos": 62,
+          "minutos": 69,
           "limite": 20
         },
         {
@@ -506,7 +506,7 @@
           "total": 304000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:21:51.317Z",
-          "minutos": 614,
+          "minutos": 621,
           "limite": 15
         },
         {
@@ -850,7 +850,7 @@
           "total": 38000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:42:28.041Z",
-          "minutos": 534,
+          "minutos": 541,
           "limite": 15
         },
         {
@@ -872,7 +872,7 @@
           "total": 16000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:33:38.332Z",
-          "minutos": 567,
+          "minutos": 574,
           "limite": 15
         },
         {
@@ -901,7 +901,7 @@
           "total": 35000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:10:12.244Z",
-          "minutos": 627,
+          "minutos": 634,
           "limite": 20
         },
         {
@@ -923,7 +923,7 @@
           "total": 46000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:06:12.244Z",
-          "minutos": 631,
+          "minutos": 638,
           "limite": 25
         }
       ],
@@ -992,14 +992,6 @@
       "pinHash": "$2b$10$Bbv03ZoFf7FIFJTaZCKIWuq3WXfZjC9P3cVxp6RVoyxPRjLLdmsuW",
       "name": "Administración Pizzería",
       "role": "admin"
-    },
-    {
-      "id": "u-pizzeria-napoles-1348",
-      "empresaId": "pizzeria-napoles",
-      "username": "mariapizza",
-      "name": "María Pizza",
-      "role": "waiter",
-      "pinHash": "$2b$10$o0k0dsuSYBrWH0bTZHSKO.kB24NoE/B2DmapZ9OVB5PvWN2WAUMoi"
     },
     {
       "id": "u-rosty-broaster-0867",
