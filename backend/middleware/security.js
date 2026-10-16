@@ -10,8 +10,14 @@ export const getCorsMiddleware = () => {
 
   return cors({
     origin: (origin, callback) => {
-      // Permitir peticiones sin origen (como apps móviles, Postman o SSR) en dev
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      // Permitir peticiones sin origen (como apps móviles, Postman o SSR) en dev o si coincide
+      if (
+        !origin || 
+        allowedOrigins.includes('*') || 
+        allowedOrigins.includes(origin) || 
+        (typeof origin === 'string' && origin.endsWith('.vercel.app')) ||
+        process.env.NODE_ENV !== 'production'
+      ) {
         return callback(null, true);
       }
       return callback(new Error('CORS: Origen no permitido por la política de seguridad.'));

@@ -492,7 +492,7 @@
           "total": 21000,
           "estado": "En preparación",
           "createdAt": "2026-10-16T22:26:27.828Z",
-          "minutos": 79,
+          "minutos": 115,
           "limite": 15
         },
         {
@@ -514,7 +514,7 @@
           "total": 11000,
           "estado": "En preparación",
           "createdAt": "2026-10-16T22:05:02.718Z",
-          "minutos": 162,
+          "minutos": 198,
           "limite": 20
         },
         {
@@ -536,7 +536,7 @@
           "total": 304000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:21:51.317Z",
-          "minutos": 714,
+          "minutos": 750,
           "limite": 15
         },
         {
@@ -880,7 +880,7 @@
           "total": 38000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:42:28.041Z",
-          "minutos": 634,
+          "minutos": 670,
           "limite": 15
         },
         {
@@ -902,7 +902,7 @@
           "total": 16000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:33:38.332Z",
-          "minutos": 667,
+          "minutos": 703,
           "limite": 15
         },
         {
@@ -931,7 +931,7 @@
           "total": 35000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:10:12.244Z",
-          "minutos": 727,
+          "minutos": 763,
           "limite": 20
         },
         {
@@ -953,7 +953,7 @@
           "total": 46000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:06:12.244Z",
-          "minutos": 731,
+          "minutos": 767,
           "limite": 25
         }
       ],

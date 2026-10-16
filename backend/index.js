@@ -31,12 +31,19 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      if (
+        !origin || 
+        allowedOrigins.includes('*') || 
+        allowedOrigins.includes(origin) || 
+        (typeof origin === 'string' && origin.endsWith('.vercel.app')) ||
+        process.env.NODE_ENV !== 'production'
+      ) {
         return callback(null, true);
       }
       return callback(new Error('CORS WebSocket origin denied'));
     },
-    methods: ['GET', 'POST']
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
