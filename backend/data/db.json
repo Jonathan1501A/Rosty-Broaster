@@ -492,7 +492,7 @@
           "total": 21000,
           "estado": "En preparación",
           "createdAt": "2026-10-16T22:26:27.828Z",
-          "minutos": 33,
+          "minutos": 79,
           "limite": 15
         },
         {
@@ -514,7 +514,7 @@
           "total": 11000,
           "estado": "En preparación",
           "createdAt": "2026-10-16T22:05:02.718Z",
-          "minutos": 116,
+          "minutos": 162,
           "limite": 20
         },
         {
@@ -536,7 +536,7 @@
           "total": 304000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:21:51.317Z",
-          "minutos": 668,
+          "minutos": 714,
           "limite": 15
         },
         {
@@ -880,7 +880,7 @@
           "total": 38000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:42:28.041Z",
-          "minutos": 588,
+          "minutos": 634,
           "limite": 15
         },
         {
@@ -902,7 +902,7 @@
           "total": 16000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:33:38.332Z",
-          "minutos": 621,
+          "minutos": 667,
           "limite": 15
         },
         {
@@ -931,7 +931,7 @@
           "total": 35000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:10:12.244Z",
-          "minutos": 681,
+          "minutos": 727,
           "limite": 20
         },
         {
@@ -953,7 +953,7 @@
           "total": 46000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:06:12.244Z",
-          "minutos": 685,
+          "minutos": 731,
           "limite": 25
         }
       ],
@@ -996,7 +996,7 @@
       "id": "u-rosty-admin",
       "empresaId": "rosty-broaster",
       "username": "admin",
-      "pinHash": "$2b$10$zVU.JZJu1b7MMsyrB1z.iONCR7nScfn0YrxM8tow.zKEAeMuThmPG",
+      "pinHash": "$2b$10$Mpe28unkzSI0l2BPxI0EV./xdbdDgflns87Uop/y5TG1HYXynPabC",
       "name": "Administración & Auditoría",
       "role": "admin"
     },
@@ -1025,30 +1025,6 @@
       "role": "admin"
     },
     {
-      "id": "u-rosty-broaster-0867",
-      "empresaId": "rosty-broaster",
-      "username": "jarevalo",
-      "name": "Jonathan",
-      "role": "waiter",
-      "pinHash": "$2b$10$OCESufX0ASgNsNaHnXU3I.ETOUpFL73bG/VJwqKvnzOhX.HOUDSpq"
-    },
-    {
-      "id": "u-rosty-broaster-1956",
-      "empresaId": "rosty-broaster",
-      "username": "pgerez",
-      "name": "patricia",
-      "role": "waiter",
-      "pinHash": "$2b$10$3UoWc5iEpLbMoiI54ARzIe22k4uLpaCgzdnA9sNY48MDPmgQx6yaS"
-    },
-    {
-      "id": "u-rosty-broaster-9164",
-      "empresaId": "rosty-broaster",
-      "username": "jfabian",
-      "name": "Fabian Arevalo",
-      "role": "admin",
-      "pinHash": "$2b$10$o00kXjuJEtny2G6JiijpQOecFEQzqktRCazKeWYms46rwOWBzEWZC"
-    },
-    {
       "id": "u-superadmin-global",
       "empresaId": "global",
       "username": "superadmin",
@@ -1063,6 +1039,30 @@
       "name": "Carlos Mesero",
       "role": "waiter",
       "pinHash": "$2b$10$whdAaiTfmjZ9WVkJ8A8x1utmmyseetR8iA4GeptcgQ7PejM03DHOm"
+    },
+    {
+      "id": "u-rosty-broaster-2302",
+      "empresaId": "rosty-broaster",
+      "username": "jonathan",
+      "name": "Jonathan Arevalo",
+      "role": "waiter",
+      "pinHash": "$2b$10$5R37YGIoRV92o2mhr7ExEOPcPNmQofqtCDFfBowytYtWw.geU9pVW"
+    },
+    {
+      "id": "u-rosty-broaster-0723",
+      "empresaId": "rosty-broaster",
+      "username": "fabian",
+      "name": "Fabian Arevalo",
+      "role": "admin",
+      "pinHash": "$2b$10$lVkdaGf.aNBTr.7VFjpWkubA0tuY2szc7PqqRIwhNIhKh1pLZyVtK"
+    },
+    {
+      "id": "u-rosty-broaster-8335",
+      "empresaId": "rosty-broaster",
+      "username": "patricia",
+      "name": "Patricia Gerez",
+      "role": "chef",
+      "pinHash": "$2b$10$6naHqELP.FXkPSLoV1Zp0.L0Nkp.vOFSYMcYWjAVjJmo9GWMG2ldS"
     }
   ]
 }

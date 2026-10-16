@@ -298,6 +298,14 @@ export default function App() {
     }
   }, [currentTenantId]);
 
+  // Manejar Logout / Cerrar Turno
+  const handleLogout = useCallback(() => {
+    api.logout();
+    disconnectSocket();
+    setUser(null);
+    addToast('info', 'Sesión cerrada. Selecciona el restaurante para iniciar turno.', 'Turno Finalizado');
+  }, [addToast]);
+
   // Inicializar WebSockets con sala exclusiva por empresa
   useEffect(() => {
     if (!user || user.role === 'superadmin') return;
@@ -390,14 +398,6 @@ export default function App() {
 
     setActiveTab(authenticatedUser.role === 'chef' ? 'kitchen' : authenticatedUser.role === 'admin' ? 'reports' : 'tables');
     addToast('success', `Turno iniciado en ${targetTenant.nombre} como ${authenticatedUser.name || authenticatedUser.username}.`, '¡Bienvenido!');
-  };
-
-  // Manejar Logout / Cambiar de Restaurante
-  const handleLogout = () => {
-    api.logout();
-    disconnectSocket();
-    setUser(null);
-    addToast('info', 'Sesión cerrada. Selecciona el restaurante para iniciar turno.', 'Turno Finalizado');
   };
 
   // Guardar Personalización del Restaurante
