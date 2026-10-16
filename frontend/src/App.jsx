@@ -11,6 +11,7 @@ import CompanySettingsModal from './components/CompanySettingsModal.jsx';
 import UserManagementModal from './components/UserManagementModal.jsx';
 import MenuManagementModal from './components/MenuManagementModal.jsx';
 import CloseCashModal from './components/CloseCashModal.jsx';
+import SuperAdminView from './components/SuperAdminView.jsx';
 import Toast from './components/Toast.jsx';
 
 import { api } from './services/api.js';
@@ -299,7 +300,7 @@ export default function App() {
 
   // Inicializar WebSockets con sala exclusiva por empresa
   useEffect(() => {
-    if (!user) return;
+    if (!user || user.role === 'superadmin') return;
 
     fetchData();
 
@@ -354,6 +355,12 @@ export default function App() {
   // Manejar Login Estricto con Empresa y PIN
   const handleLoginSuccess = (authenticatedUser, selectedTenant) => {
     setUser(authenticatedUser);
+
+    if (authenticatedUser.role === 'superadmin') {
+      addToast('success', 'Sesión iniciada como Superadministrador Global.', 'Panel Maestro');
+      return;
+    }
+
     const targetTenant = selectedTenant || DEFAULT_TENANT;
     setTenant(targetTenant);
     applyTenantTheme(targetTenant);
@@ -628,6 +635,37 @@ export default function App() {
         <PrivacyModal
           isOpen={isPrivacyOpen}
           onClose={() => setIsPrivacyOpen(false)}
+        />
+        <Toast toasts={toasts} onDismiss={removeToast} />
+      </>
+    );
+  }
+
+  // Si es Superadmin Global, renderizar el Panel Maestro de Empresas
+  if (user.role === 'superadmin') {
+    return (
+      <>
+        <SuperAdminView
+          onLogout={handleLogout}
+          onSelectTenantToOpen={(chosenTenant) => {
+            localStorage.setItem('rosty_active_tenant_id', chosenTenant.id);
+            setTenant(chosenTenant);
+            applyTenantTheme(chosenTenant);
+            const freshTables = getInitialTables(chosenTenant);
+            const freshOrders = getInitialOrders(chosenTenant.id);
+            setTables(freshTables);
+            setOrders(freshOrders);
+            joinTenantRoom(chosenTenant.id);
+            setUser({
+              id: `u-${chosenTenant.id}-admin`,
+              empresaId: chosenTenant.id,
+              username: 'admin',
+              role: 'admin',
+              name: `Superadmin (${chosenTenant.nombre})`
+            });
+            setActiveTab('tables');
+            addToast('info', `Ingresaste en modo auditor a ${chosenTenant.nombre}`, 'Punto de Venta');
+          }}
         />
         <Toast toasts={toasts} onDismiss={removeToast} />
       </>

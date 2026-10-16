@@ -157,6 +157,7 @@ class Store {
         if (parsed.tenants && parsed.tenants.length > 0) {
           this.tenants = parsed.tenants;
           this.users = parsed.users || [];
+          this.ensureSuperadmin();
           console.log(`💾 Base de datos cargada de disco: ${this.tenants.length} restaurantes.`);
           return;
         }
@@ -321,7 +322,28 @@ class Store {
     ];
 
     this.users = [...INITIAL_ROSTY_USERS, ...INITIAL_PIZZERIA_USERS];
+    this.ensureSuperadmin();
     this.persist();
+  }
+
+  ensureSuperadmin() {
+    const existing = this.users.find(u => u.username === 'superadmin' || u.role === 'superadmin');
+    if (!existing) {
+      this.users.push({
+        id: 'u-superadmin-global',
+        empresaId: 'global',
+        username: 'superadmin',
+        pinHash: bcrypt.hashSync('superadmin2026', 10),
+        name: 'Administrador Global',
+        role: 'superadmin'
+      });
+      this.persist();
+    }
+  }
+
+  getSuperadmin() {
+    this.ensureSuperadmin();
+    return this.users.find(u => u.role === 'superadmin' || u.username === 'superadmin') || null;
   }
 
   persist() {
@@ -348,16 +370,25 @@ class Store {
       numeroMesas: t.numeroMesas,
       telefono: t.telefono,
       direccion: t.direccion,
-      whatsappDomiciliario: t.whatsappDomiciliario
+      whatsappDomiciliario: t.whatsappDomiciliario,
+      totalMesas: t.tables?.length || t.numeroMesas || 10,
+      totalOrdenes: t.orders?.length || 0,
+      totalVentas: (t.salesHistory || []).reduce((acc, s) => acc + (s.total || 0), 0)
     }));
   }
 
   getTenant(tenantId = 'rosty-broaster') {
-    let t = this.tenants.find(ten => ten.id === tenantId);
-    if (!t) {
-      t = this.tenants[0]; // Fallback seguro
-    }
-    return t;
+    if (!tenantId) return this.tenants[0] || null;
+    return this.tenants.find(ten => ten.id === tenantId) || null;
+  }
+
+  deleteTenant(tenantId) {
+    const index = this.tenants.findIndex(t => t.id === tenantId);
+    if (index === -1) return false;
+    this.tenants.splice(index, 1);
+    this.users = this.users.filter(u => u.empresaId !== tenantId);
+    this.persist();
+    return true;
   }
 
   createTenant({
@@ -554,19 +585,52 @@ class Store {
     return wasDeleted;
   }
 
-  findUser(tenantId, identifier) {
-    return this.users.find(
-      u => u.empresaId === tenantId && (
-        u.username.toLowerCase() === identifier.toLowerCase() ||
-        u.role.toLowerCase() === identifier.toLowerCase()
-      )
+  findUser(tenantId, identifier, pin = null) {
+    if (!identifier) return null;
+    const cleanId = String(identifier).trim().toLowerCase();
+
+    // 1. Acceso Superadmin Global
+    if (tenantId === 'global' || cleanId === 'superadmin') {
+      return this.getSuperadmin();
+    }
+
+    const tenantUsers = this.users.filter(u => u.empresaId === tenantId);
+
+    // 2. Coincidencia por username exacto (ej: 'carlos', 'mariapizza', 'admin', 'waiter')
+    const byUsername = tenantUsers.find(
+      u => u.username && u.username.toLowerCase() === cleanId
     );
+    if (byUsername) return byUsername;
+
+    // 3. Coincidencia por rol (ej: 'waiter', 'chef', 'admin')
+    const byRoleUsers = tenantUsers.filter(
+      u => u.role && u.role.toLowerCase() === cleanId
+    );
+
+    if (byRoleUsers.length === 1) {
+      return byRoleUsers[0];
+    }
+
+    // 4. Si hay múltiples usuarios para ese rol (ej: varios meseros) y se proporcionó PIN, probar hash
+    if (byRoleUsers.length > 1 && pin) {
+      const matched = byRoleUsers.find(u => {
+        try {
+          return bcrypt.compareSync(String(pin).trim(), u.pinHash);
+        } catch {
+          return false;
+        }
+      });
+      if (matched) return matched;
+    }
+
+    return byRoleUsers[0] || null;
   }
 
   // --- MESAS POR EMPRESA ---
 
   getTables(tenantId = 'rosty-broaster') {
-    return this.getTenant(tenantId).tables;
+    const tenant = this.getTenant(tenantId) || this.tenants[0];
+    return tenant ? tenant.tables : [];
   }
 
   occupyTable(tenantId, numero, items = []) {

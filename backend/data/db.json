@@ -12,9 +12,9 @@
         "superficie": "#3d2314"
       },
       "numeroMesas": 14,
-      "telefono": "3227801140",
-      "direccion": "Calle 5 #10-20",
-      "whatsappDomiciliario": "3227801140",
+      "telefono": "",
+      "direccion": "",
+      "whatsappDomiciliario": "3118303263",
       "menu": {
         "Pollo Broaster 🍗": [
           {
@@ -301,7 +301,7 @@
             "id": 701,
             "name": "Gaseosa Personal 350ml",
             "price": 3500,
-            "desc": "Coca-Cola, Postobón, Colombiana, Manzana o Sprite."
+            "desc": "Postobón, Colombiana, Manzana ."
           },
           {
             "id": 702,
@@ -326,6 +326,12 @@
             "name": "Cerveza Nacional",
             "price": 5000,
             "desc": "Poker, Águila, Club Colombia."
+          },
+          {
+            "id": 1792188203718,
+            "name": "Gaseosa 1.5L Cocacola",
+            "price": 8000,
+            "desc": "Plato preparado al instante."
           }
         ]
       },
@@ -358,22 +364,9 @@
           "id": 3,
           "numero": 3,
           "capacidad": 4,
-          "estado": "ocupada",
-          "apertura": "2026-10-10T22:53:12.242Z",
-          "pedidoActual": [
-            {
-              "id": 103,
-              "name": "1 Pollo + Yuca + Arepa",
-              "price": 38000,
-              "cantidad": 1
-            },
-            {
-              "id": 703,
-              "name": "Gaseosa Familiar 1.5L",
-              "price": 7000,
-              "cantidad": 1
-            }
-          ]
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
         },
         {
           "id": 4,
@@ -473,6 +466,28 @@
       ],
       "orders": [
         {
+          "id": "ORD-2718",
+          "empresaId": "rosty-broaster",
+          "tipo": "delivery",
+          "destino": "palo gordo",
+          "cliente": "pepito",
+          "datosExtra": "Tel: 3123346877",
+          "items": [
+            {
+              "id": 101,
+              "name": "1/4 Pollo + Yuca + Arepa",
+              "price": 11000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ],
+          "total": 11000,
+          "estado": "En preparación",
+          "createdAt": "2026-10-16T22:05:02.718Z",
+          "minutos": 62,
+          "limite": 20
+        },
+        {
           "id": "ORD-1317",
           "empresaId": "rosty-broaster",
           "tipo": "dine_in",
@@ -491,36 +506,7 @@
           "total": 304000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:21:51.317Z",
-          "minutos": 69,
-          "limite": 15
-        },
-        {
-          "id": "ORD-201",
-          "empresaId": "rosty-broaster",
-          "tipo": "dine_in",
-          "destino": "Mesa 3",
-          "cliente": "Salón",
-          "datosExtra": "Puestos: 4",
-          "items": [
-            {
-              "id": 103,
-              "name": "1 Pollo + Yuca + Arepa",
-              "price": 38000,
-              "cantidad": 1,
-              "completado": true
-            },
-            {
-              "id": 703,
-              "name": "Gaseosa Familiar 1.5L",
-              "price": 7000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ],
-          "total": 45000,
-          "estado": "En preparación",
-          "createdAt": "2026-10-10T23:08:12.244Z",
-          "minutos": 84,
+          "minutos": 614,
           "limite": 15
         },
         {
@@ -568,33 +554,67 @@
           "limite": 15
         }
       ],
-      "salesHistory": [
+      "salesHistory": [],
+      "closures": [
         {
-          "id": "REC-1001",
-          "ordenId": "MESA-4",
-          "destino": "Mesa 4",
-          "cliente": "Salón",
-          "total": 52000,
-          "metodoPago": "efectivo",
-          "montoRecibido": 60000,
-          "cambio": 8000,
-          "despachadoPor": "waiter",
-          "timestamp": "2026-10-10T22:33:12.244Z"
-        },
-        {
-          "id": "REC-1002",
-          "ordenId": "DOM-88",
-          "destino": "Carrera 7 #12-30",
-          "cliente": "Carlos Méndez",
-          "total": 38000,
-          "metodoPago": "nequi",
-          "montoRecibido": 38000,
-          "cambio": 0,
-          "despachadoPor": "waiter",
-          "timestamp": "2026-10-10T21:53:12.244Z"
+          "id": "CORTE-5473",
+          "empresaId": "rosty-broaster",
+          "fecha": "2026-10-16T22:00:45.473Z",
+          "fechaFormateada": "viernes, 16 de octubre de 2026, 5:00 p. m.",
+          "cerradoPor": "Administración & Auditoría",
+          "totalVendido": 135000,
+          "totalComandas": 3,
+          "porMetodoPago": {
+            "efectivo": 52000,
+            "nequi": 83000,
+            "daviplata": 0,
+            "tarjeta": 0
+          },
+          "baseCaja": 50000,
+          "efectivoEsperado": 102000,
+          "efectivoReal": 102000,
+          "diferencia": 0,
+          "notas": "",
+          "comprobantes": [
+            {
+              "id": "REC-4291",
+              "ordenId": "MESA-3",
+              "destino": "Mesa 3",
+              "cliente": "Salón",
+              "total": 45000,
+              "metodoPago": "nequi",
+              "montoRecibido": 45000,
+              "cambio": 0,
+              "despachadoPor": "Mesero Salón & Caja",
+              "timestamp": "2026-10-16T22:00:24.291Z"
+            },
+            {
+              "id": "REC-1001",
+              "ordenId": "MESA-4",
+              "destino": "Mesa 4",
+              "cliente": "Salón",
+              "total": 52000,
+              "metodoPago": "efectivo",
+              "montoRecibido": 60000,
+              "cambio": 8000,
+              "despachadoPor": "waiter",
+              "timestamp": "2026-10-10T22:33:12.244Z"
+            },
+            {
+              "id": "REC-1002",
+              "ordenId": "DOM-88",
+              "destino": "Carrera 7 #12-30",
+              "cliente": "Carlos Méndez",
+              "total": 38000,
+              "metodoPago": "nequi",
+              "montoRecibido": 38000,
+              "cambio": 0,
+              "despachadoPor": "waiter",
+              "timestamp": "2026-10-10T21:53:12.244Z"
+            }
+          ]
         }
-      ],
-      "closures": []
+      ]
     },
     {
       "id": "pizzeria-napoles",
@@ -741,9 +761,17 @@
           "id": 3,
           "numero": 3,
           "capacidad": 4,
-          "estado": "libre",
-          "apertura": null,
-          "pedidoActual": []
+          "estado": "ocupada",
+          "apertura": "2026-10-10T23:42:28.041Z",
+          "pedidoActual": [
+            {
+              "id": 803,
+              "name": "Pizza Hawaiana Familiar",
+              "price": 38000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ]
         },
         {
           "id": 4,
@@ -804,6 +832,28 @@
       ],
       "orders": [
         {
+          "id": "ORD-8041",
+          "empresaId": "pizzeria-napoles",
+          "tipo": "dine_in",
+          "destino": "Mesa 3",
+          "cliente": "Salón",
+          "datosExtra": "Salón",
+          "items": [
+            {
+              "id": 803,
+              "name": "Pizza Hawaiana Familiar",
+              "price": 38000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ],
+          "total": 38000,
+          "estado": "En preparación",
+          "createdAt": "2026-10-10T23:42:28.041Z",
+          "minutos": 534,
+          "limite": 15
+        },
+        {
           "id": "ORD-8332",
           "empresaId": "pizzeria-napoles",
           "tipo": "dine_in",
@@ -822,7 +872,7 @@
           "total": 16000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:33:38.332Z",
-          "minutos": 22,
+          "minutos": 567,
           "limite": 15
         },
         {
@@ -851,7 +901,7 @@
           "total": 35000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:10:12.244Z",
-          "minutos": 82,
+          "minutos": 627,
           "limite": 20
         },
         {
@@ -873,7 +923,7 @@
           "total": 46000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:06:12.244Z",
-          "minutos": 86,
+          "minutos": 631,
           "limite": 25
         }
       ],
@@ -950,6 +1000,46 @@
       "name": "María Pizza",
       "role": "waiter",
       "pinHash": "$2b$10$o0k0dsuSYBrWH0bTZHSKO.kB24NoE/B2DmapZ9OVB5PvWN2WAUMoi"
+    },
+    {
+      "id": "u-rosty-broaster-0867",
+      "empresaId": "rosty-broaster",
+      "username": "jarevalo",
+      "name": "Jonathan",
+      "role": "waiter",
+      "pinHash": "$2b$10$OCESufX0ASgNsNaHnXU3I.ETOUpFL73bG/VJwqKvnzOhX.HOUDSpq"
+    },
+    {
+      "id": "u-rosty-broaster-1956",
+      "empresaId": "rosty-broaster",
+      "username": "pgerez",
+      "name": "patricia",
+      "role": "waiter",
+      "pinHash": "$2b$10$3UoWc5iEpLbMoiI54ARzIe22k4uLpaCgzdnA9sNY48MDPmgQx6yaS"
+    },
+    {
+      "id": "u-rosty-broaster-9164",
+      "empresaId": "rosty-broaster",
+      "username": "jfabian",
+      "name": "Fabian Arevalo",
+      "role": "admin",
+      "pinHash": "$2b$10$o00kXjuJEtny2G6JiijpQOecFEQzqktRCazKeWYms46rwOWBzEWZC"
+    },
+    {
+      "id": "u-superadmin-global",
+      "empresaId": "global",
+      "username": "superadmin",
+      "pinHash": "$2b$10$BHT1aGvr57qFyy1T6vxbzuxKNc9YTjMJ99fFXtJ7FCx9TEKHvp1gS",
+      "name": "Administrador Global",
+      "role": "superadmin"
+    },
+    {
+      "id": "u-rosty-broaster-2714",
+      "empresaId": "rosty-broaster",
+      "username": "carlos",
+      "name": "Carlos Mesero",
+      "role": "waiter",
+      "pinHash": "$2b$10$whdAaiTfmjZ9WVkJ8A8x1utmmyseetR8iA4GeptcgQ7PejM03DHOm"
     }
   ]
 }

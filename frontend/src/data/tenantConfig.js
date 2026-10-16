@@ -59,13 +59,29 @@ export const applyTenantTheme = (tenant) => {
   }
 };
 
+export const resolveTenantFromUrlOrStorage = () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('empresa') || params.get('restaurante') || params.get('tenant');
+    if (fromUrl) {
+      const clean = fromUrl.trim().toLowerCase();
+      localStorage.setItem('rosty_active_tenant_id', clean);
+      return clean;
+    }
+    return localStorage.getItem('rosty_active_tenant_id') || 'rosty-broaster';
+  } catch {
+    return 'rosty-broaster';
+  }
+};
+
 export const getStoredTenant = () => {
   try {
-    const activeId = localStorage.getItem('rosty_active_tenant_id') || DEFAULT_TENANT.id;
+    const activeId = resolveTenantFromUrlOrStorage();
     const stored = localStorage.getItem(`rosty_tenant_${activeId}`);
     if (stored) return JSON.parse(stored);
     if (activeId === 'pizzeria-napoles') return DEFAULT_PIZZERIA;
-    return DEFAULT_TENANT;
+    if (activeId === 'rosty-broaster') return DEFAULT_TENANT;
+    return null;
   } catch {
     return DEFAULT_TENANT;
   }

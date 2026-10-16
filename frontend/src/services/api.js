@@ -23,12 +23,17 @@ const getHeaders = (overrideTenantId) => {
 };
 
 export const api = {
-  // Autenticación Multi-Tenant
-  login: async (role, pin, empresaId = 'rosty-broaster') => {
+  // Autenticación Multi-Tenant y Superadmin
+  login: async (identifier, pin, empresaId = 'rosty-broaster') => {
     const res = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role, pin, empresaId })
+      body: JSON.stringify({ 
+        username: identifier, 
+        role: identifier, 
+        pin, 
+        empresaId 
+      })
     });
     const data = await res.json();
     if (!res.ok) {
@@ -37,12 +42,18 @@ export const api = {
     if (data.token) {
       localStorage.setItem('rosty_auth_token', data.token);
       localStorage.setItem('rosty_auth_user', JSON.stringify(data.user));
-      localStorage.setItem('rosty_active_tenant_id', empresaId);
-      if (data.empresa) {
-        localStorage.setItem(`rosty_tenant_${empresaId}`, JSON.stringify(data.empresa));
+      if (empresaId && empresaId !== 'global') {
+        localStorage.setItem('rosty_active_tenant_id', empresaId);
+        if (data.empresa) {
+          localStorage.setItem(`rosty_tenant_${empresaId}`, JSON.stringify(data.empresa));
+        }
       }
     }
     return data;
+  },
+
+  loginSuperadmin: async (username, password) => {
+    return api.login(username, password, 'global');
   },
 
   getCurrentUser: () => {
@@ -59,10 +70,15 @@ export const api = {
     localStorage.removeItem('rosty_auth_user');
   },
 
-  // Gestión de Empresas (Tenants)
+  // Gestión de Empresas (Tenants) - Protegido Superadmin
   getTenants: async () => {
-    const res = await fetch(`${API_URL}/api/tenants`);
-    if (!res.ok) throw new Error('Error al listar empresas');
+    const res = await fetch(`${API_URL}/api/tenants`, {
+      headers: getHeaders('global')
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Error al listar empresas');
+    }
     const data = await res.json();
     return data.tenants;
   },
@@ -70,7 +86,7 @@ export const api = {
   createTenant: async (tenantData) => {
     const res = await fetch(`${API_URL}/api/tenants`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders('global'),
       body: JSON.stringify(tenantData)
     });
     const data = await res.json();
@@ -78,9 +94,19 @@ export const api = {
     return data;
   },
 
+  deleteTenant: async (tenantId) => {
+    const res = await fetch(`${API_URL}/api/tenants/${tenantId}`, {
+      method: 'DELETE',
+      headers: getHeaders('global')
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al eliminar restaurante');
+    return data;
+  },
+
   getTenant: async (tenantId) => {
     const res = await fetch(`${API_URL}/api/tenants/${tenantId}`);
-    if (!res.ok) throw new Error('Error al consultar empresa');
+    if (!res.ok) throw new Error('Restaurante no encontrado');
     const data = await res.json();
     return data.tenant;
   },

@@ -440,29 +440,6 @@ export default function Navbar({
           </span>
         </div>
 
-        {/* Cambiar de Restaurante */}
-        <button
-          type="button"
-          onClick={onLogout}
-          title="Cambiar de Restaurante / Empresa"
-          style={{
-            backgroundColor: '#2b180d',
-            color: '#ffcc00',
-            border: '1.5px solid #ffcc00',
-            padding: '7px 12px',
-            borderRadius: '10px',
-            fontSize: '0.8rem',
-            fontWeight: '800',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            cursor: 'pointer'
-          }}
-        >
-          <Building2 size={15} />
-          <span>Cambiar Restaurante</span>
-        </button>
-
         {/* Logout */}
         <button
           onClick={onLogout}
@@ -471,18 +448,18 @@ export default function Navbar({
             backgroundColor: '#c62828',
             color: '#fff',
             border: 'none',
-            padding: '7px 12px',
+            padding: '8px 16px',
             borderRadius: '10px',
-            fontSize: '0.8rem',
+            fontSize: '0.825rem',
             fontWeight: '800',
             display: 'flex',
             alignItems: 'center',
-            gap: '5px',
+            gap: '6px',
             cursor: 'pointer'
           }}
         >
-          <LogOut size={15} />
-          <span>Salir</span>
+          <LogOut size={16} />
+          <span>Cerrar Turno</span>
         </button>
       </div>
     </header>

@@ -1,21 +1,47 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import { store } from '../data/store.js';
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'rosty_secret_dev_key_2026_local';
+
+const isSuperadmin = (req) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  if (!token) return false;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return decoded && decoded.role === 'superadmin';
+  } catch {
+    return false;
+  }
+};
 
 /**
  * @route GET /api/tenants
- * @desc Listar todas las empresas registradas
+ * @desc Listar todas las empresas registradas (Exclusivo Superadmin)
  */
 router.get('/', (req, res) => {
+  if (!isSuperadmin(req)) {
+    return res.status(403).json({
+      error: 'Acceso restringido: Solo el Administrador Global puede ver la lista de empresas.',
+      tenants: []
+    });
+  }
   res.json({ tenants: store.getTenants() });
 });
 
 /**
  * @route POST /api/tenants
- * @desc Registrar una nueva empresa / restaurante
+ * @desc Registrar una nueva empresa / restaurante (Exclusivo Superadmin)
  */
 router.post('/', (req, res) => {
+  if (!isSuperadmin(req)) {
+    return res.status(403).json({
+      error: 'Acceso restringido: Solo el Administrador Global puede registrar empresas.'
+    });
+  }
+
   const {
     nombre,
     slogan,
@@ -60,6 +86,30 @@ router.post('/', (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+/**
+ * @route DELETE /api/tenants/:id
+ * @desc Eliminar una empresa / restaurante (Exclusivo Superadmin)
+ */
+router.delete('/:id', (req, res) => {
+  if (!isSuperadmin(req)) {
+    return res.status(403).json({
+      error: 'Acceso restringido: Solo el Administrador Global puede eliminar empresas.'
+    });
+  }
+
+  const deleted = store.deleteTenant(req.params.id);
+  if (!deleted) {
+    return res.status(404).json({ error: 'Restaurante no encontrado.' });
+  }
+
+  const io = req.app.get('io');
+  if (io) {
+    io.emit('tenants:updated', store.getTenants());
+  }
+
+  res.json({ message: 'Restaurante eliminado con éxito.' });
 });
 
 /**
