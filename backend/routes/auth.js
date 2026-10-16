@@ -68,6 +68,14 @@ router.post('/login', authLimiter, (req, res) => {
     });
   }
 
+  // Verificar si el restaurante está cerrado o suspendido
+  if (tenant.estado === 'cerrado') {
+    return res.status(403).json({
+      error: `El restaurante "${tenant.nombre}" se encuentra temporalmente cerrado o suspendido por la administración de la plataforma.`,
+      code: 'TENANT_CLOSED'
+    });
+  }
+
   // Buscar usuario específico de esa empresa (por username, rol o PIN)
   const user = store.findUser(empresaId, identifier, userPin);
 
@@ -114,7 +122,8 @@ router.post('/login', authLimiter, (req, res) => {
       logoEmoji: tenant.logoEmoji,
       colores: tenant.colores,
       numeroMesas: tenant.numeroMesas,
-      whatsappDomiciliario: tenant.whatsappDomiciliario
+      whatsappDomiciliario: tenant.whatsappDomiciliario,
+      estado: tenant.estado || 'activo'
     }
   });
 });

@@ -64,6 +64,14 @@ export const initSocket = (tenantId = 'rosty-broaster', callbacks = {}) => {
     socket.on('stats:updated', callbacks.onStatsUpdated);
   }
 
+  if (callbacks.onAnnouncement) {
+    socket.on('superadmin:announcement', callbacks.onAnnouncement);
+  }
+
+  if (callbacks.onTenantStatusChanged) {
+    socket.on('tenant:status_changed', callbacks.onTenantStatusChanged);
+  }
+
   return socket;
 };
 

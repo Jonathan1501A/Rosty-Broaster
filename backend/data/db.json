@@ -380,9 +380,17 @@
           "id": 5,
           "numero": 5,
           "capacidad": 4,
-          "estado": "libre",
-          "apertura": null,
-          "pedidoActual": []
+          "estado": "ocupada",
+          "apertura": "2026-10-16T22:26:27.829Z",
+          "pedidoActual": [
+            {
+              "id": 102,
+              "name": "1/2 Pollo + Yuca + Arepa",
+              "price": 21000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ]
         },
         {
           "id": 6,
@@ -466,6 +474,28 @@
       ],
       "orders": [
         {
+          "id": "ORD-7828",
+          "empresaId": "rosty-broaster",
+          "tipo": "dine_in",
+          "destino": "Mesa 5",
+          "cliente": "Salón",
+          "datosExtra": "Salón",
+          "items": [
+            {
+              "id": 102,
+              "name": "1/2 Pollo + Yuca + Arepa",
+              "price": 21000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ],
+          "total": 21000,
+          "estado": "En preparación",
+          "createdAt": "2026-10-16T22:26:27.828Z",
+          "minutos": 33,
+          "limite": 15
+        },
+        {
           "id": "ORD-2718",
           "empresaId": "rosty-broaster",
           "tipo": "delivery",
@@ -484,7 +514,7 @@
           "total": 11000,
           "estado": "En preparación",
           "createdAt": "2026-10-16T22:05:02.718Z",
-          "minutos": 69,
+          "minutos": 116,
           "limite": 20
         },
         {
@@ -506,7 +536,7 @@
           "total": 304000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:21:51.317Z",
-          "minutos": 621,
+          "minutos": 668,
           "limite": 15
         },
         {
@@ -850,7 +880,7 @@
           "total": 38000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:42:28.041Z",
-          "minutos": 541,
+          "minutos": 588,
           "limite": 15
         },
         {
@@ -872,7 +902,7 @@
           "total": 16000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:33:38.332Z",
-          "minutos": 574,
+          "minutos": 621,
           "limite": 15
         },
         {
@@ -901,7 +931,7 @@
           "total": 35000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:10:12.244Z",
-          "minutos": 634,
+          "minutos": 681,
           "limite": 20
         },
         {
@@ -923,7 +953,7 @@
           "total": 46000,
           "estado": "En preparación",
           "createdAt": "2026-10-10T23:06:12.244Z",
-          "minutos": 638,
+          "minutos": 685,
           "limite": 25
         }
       ],
@@ -941,7 +971,8 @@
           "timestamp": "2026-10-10T22:18:12.244Z"
         }
       ],
-      "closures": []
+      "closures": [],
+      "estado": "activo"
     }
   ],
   "users": [
@@ -989,7 +1020,7 @@
       "id": "u-pizzeria-admin",
       "empresaId": "pizzeria-napoles",
       "username": "admin",
-      "pinHash": "$2b$10$Bbv03ZoFf7FIFJTaZCKIWuq3WXfZjC9P3cVxp6RVoyxPRjLLdmsuW",
+      "pinHash": "$2b$10$VQ2hQ5g199ZYL2SjxHxuU.dsaRFIf6THN/2XsdfL1vcBaIeprpkDu",
       "name": "Administración Pizzería",
       "role": "admin"
     },

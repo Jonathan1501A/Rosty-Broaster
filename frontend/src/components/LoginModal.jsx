@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ChefHat, 
-  UtensilsCrossed, 
   ShieldAlert, 
   KeyRound, 
   Eye, 
   EyeOff, 
-  ShieldCheck, 
-  Store, 
-  CheckCircle2,
+  Lock, 
+  ArrowRight, 
+  ArrowLeft,
+  AlertTriangle,
   Building2,
-  Lock,
-  ArrowRight,
-  HelpCircle,
-  ArrowLeft
+  UserCheck
 } from 'lucide-react';
 import { api } from '../services/api.js';
 import { DEFAULT_TENANT, DEFAULT_PIZZERIA, applyTenantTheme, resolveTenantFromUrlOrStorage } from '../data/tenantConfig.js';
@@ -29,13 +25,13 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
     return DEFAULT_TENANT;
   });
 
-  // Credenciales de Usuario en Restaurante
-  const [username, setUsername] = useState('waiter');
+  // Credenciales de Usuario en Restaurante (Sin valores por defecto ni accesos rápidos)
+  const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   // Credenciales para Superadmin Global
-  const [superUser, setSuperUser] = useState('superadmin');
+  const [superUser, setSuperUser] = useState('');
   const [superPass, setSuperPass] = useState('');
   const [showSuperPass, setShowSuperPass] = useState(false);
 
@@ -74,50 +70,32 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
     fetchActiveTenant();
   }, [activeTenantId]);
 
-  // Manejar Login de Usuario en el Restaurante
+  // Manejar Login de Usuario en el Restaurante (Estricto, sin predeterminados)
   const handleRestaurantLogin = async (e) => {
     e.preventDefault();
+    setErrorMsg('');
+
+    if (tenant?.estado === 'cerrado') {
+      setErrorMsg(`El restaurante "${tenant.nombre}" se encuentra cerrado temporalmente por la plataforma.`);
+      return;
+    }
+
     if (!username.trim()) {
-      setErrorMsg('Por favor ingresa tu nombre de usuario o selecciona tu rol.');
+      setErrorMsg('Por favor ingresa tu nombre de usuario registrado.');
       return;
     }
     if (!pin.trim()) {
-      setErrorMsg('Por favor ingresa tu contraseña o código PIN.');
+      setErrorMsg('Por favor ingresa tu contraseña o PIN.');
       return;
     }
 
     setIsLoading(true);
-    setErrorMsg('');
 
     try {
       const data = await api.login(username.trim(), pin.trim(), activeTenantId);
       applyTenantTheme(data.empresa || tenant);
       onLoginSuccess(data.user, data.empresa || tenant);
     } catch (err) {
-      // Fallback local en caso de que el backend esté reiniciándose
-      const validPins = ['rosty123', 'pizza123', 'cocina123', 'admin123', '1234', '5678'];
-      if (validPins.includes(pin.trim())) {
-        const role = username.includes('chef') || username.includes('cocina') 
-          ? 'chef' 
-          : username.includes('admin') 
-          ? 'admin' 
-          : 'waiter';
-
-        const fallbackUser = {
-          id: `u-${username}-${activeTenantId}`,
-          username: username.trim(),
-          name: username === 'waiter' 
-            ? `Mesero ${tenant?.nombre || ''}` 
-            : username === 'chef' 
-            ? `Jefe Cocina ${tenant?.nombre || ''}` 
-            : `${username}`,
-          role,
-          empresaId: activeTenantId
-        };
-        applyTenantTheme(tenant);
-        onLoginSuccess(fallbackUser, tenant);
-        return;
-      }
       setErrorMsg(err.message || 'Credenciales incorrectas para este restaurante.');
     } finally {
       setIsLoading(false);
@@ -128,7 +106,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
   const handleSuperadminLogin = async (e) => {
     e.preventDefault();
     if (!superUser.trim() || !superPass.trim()) {
-      setErrorMsg('Ingresa el usuario y la contraseña maestra.');
+      setErrorMsg('Por favor ingresa el usuario y contraseña maestra.');
       return;
     }
 
@@ -139,17 +117,6 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
       const data = await api.loginSuperadmin(superUser.trim(), superPass.trim());
       onLoginSuccess(data.user, null);
     } catch (err) {
-      if (superUser.trim() === 'superadmin' && superPass.trim() === 'superadmin2026') {
-        const fallbackSuper = {
-          id: 'u-superadmin-global',
-          username: 'superadmin',
-          name: 'Administrador Global',
-          role: 'superadmin',
-          empresaId: 'global'
-        };
-        onLoginSuccess(fallbackSuper, null);
-        return;
-      }
       setErrorMsg(err.message || 'Contraseña maestra incorrecta.');
     } finally {
       setIsLoading(false);
@@ -161,7 +128,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
     e.preventDefault();
     const clean = (manualCode || '').trim().toLowerCase();
     if (!clean) {
-      setErrorMsg('Ingresa el código del restaurante (ej: rosty-broaster, pizzeria-napoles).');
+      setErrorMsg('Ingresa el código del restaurante asignado.');
       return;
     }
 
@@ -176,44 +143,17 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         localStorage.setItem('rosty_active_tenant_id', clean);
         applyTenantTheme(data);
         setViewMode('restaurant_login');
+        setUsername('');
         setPin('');
       }
     } catch (err) {
-      if (clean === 'pizzeria-napoles') {
-        setTenant(DEFAULT_PIZZERIA);
-        setActiveTenantId('pizzeria-napoles');
-        localStorage.setItem('rosty_active_tenant_id', 'pizzeria-napoles');
-        applyTenantTheme(DEFAULT_PIZZERIA);
-        setViewMode('restaurant_login');
-        setPin('');
-      } else if (clean === 'rosty-broaster') {
-        setTenant(DEFAULT_TENANT);
-        setActiveTenantId('rosty-broaster');
-        localStorage.setItem('rosty_active_tenant_id', 'rosty-broaster');
-        applyTenantTheme(DEFAULT_TENANT);
-        setViewMode('restaurant_login');
-        setPin('');
-      } else {
-        setErrorMsg('Restaurante no encontrado. Verifica el código con el administrador.');
-      }
+      setErrorMsg('Restaurante no encontrado. Verifica el código con la administración.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Sugerir PIN de prueba según el rol seleccionado
-  const handleQuickRole = (roleValue, defaultDemoPin) => {
-    setUsername(roleValue);
-    setPin(defaultDemoPin);
-    setErrorMsg('');
-  };
-
-  const demoPinForRole = (role) => {
-    if (activeTenantId === 'pizzeria-napoles') {
-      return role === 'waiter' ? 'pizza123' : role === 'chef' ? 'cocina123' : 'admin123';
-    }
-    return role === 'waiter' ? 'rosty123' : role === 'chef' ? 'cocina123' : 'admin123';
-  };
+  const isClosed = tenant?.estado === 'cerrado';
 
   return (
     <div
@@ -233,23 +173,23 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         className="animate-fade-in"
         style={{
           width: '100%',
-          maxWidth: '520px',
+          maxWidth: '480px',
           backgroundColor: 'var(--bg-surface, #3d2314)',
           border: '3px solid var(--brand-primary, #e27329)',
           borderRadius: '24px',
           boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(226, 115, 41, 0.3)',
-          padding: '30px 28px',
+          padding: '32px 28px',
           position: 'relative',
           zIndex: 1
         }}
       >
         {/* ============================================================== */}
-        {/* MODO 1: INICIO DE SESIÓN EN RESTAURANTE (AISLADO Y PERSONALIZADO) */}
+        {/* MODO 1: INICIO DE SESIÓN EN RESTAURANTE (ESTRICTO SIN PREDEFINIDOS) */}
         {/* ============================================================== */}
         {viewMode === 'restaurant_login' && (
           <div>
             {/* Header del Restaurante */}
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '22px' }}>
               <div
                 style={{
                   width: '64px',
@@ -275,6 +215,32 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
               </p>
             </div>
 
+            {/* Banner si el restaurante está cerrado */}
+            {isClosed && (
+              <div
+                style={{
+                  backgroundColor: 'rgba(198, 40, 40, 0.35)',
+                  border: '2px solid #ff5252',
+                  borderRadius: '14px',
+                  padding: '14px',
+                  marginBottom: '20px',
+                  color: '#ffcdd2',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px'
+                }}
+              >
+                <AlertTriangle size={22} style={{ color: '#ff5252', flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <div style={{ fontWeight: '900', color: '#ff5252', marginBottom: '2px' }}>
+                    RESTAURANTE CERRADO
+                  </div>
+                  Este establecimiento ha sido suspendido o cerrado temporalmente por la administración de la plataforma. El ingreso de personal no está disponible.
+                </div>
+              </div>
+            )}
+
             {/* Error Banner */}
             {errorMsg && (
               <div
@@ -296,17 +262,18 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
               </div>
             )}
 
-            {/* Formulario de Login */}
+            {/* Formulario de Login Estricto */}
             <form onSubmit={handleRestaurantLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Campo Usuario */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '800', color: '#ffcc00', marginBottom: '6px' }}>
-                  Nombre de Usuario o Rol
+                  Nombre de Usuario
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Tu usuario (ej: carlos, mariapizza, admin, mesero)"
+                  disabled={isClosed}
+                  placeholder="Ingresa tu usuario registrado..."
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   style={{
@@ -319,90 +286,22 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                     fontSize: '0.95rem',
                     fontWeight: '700',
                     outline: 'none',
-                    transition: 'border-color 0.2s'
+                    opacity: isClosed ? 0.6 : 1
                   }}
                 />
-
-                {/* Accesos Rápidos por Rol */}
-                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickRole('waiter', demoPinForRole('waiter'))}
-                    style={{
-                      flex: 1,
-                      backgroundColor: username === 'waiter' ? 'var(--brand-primary, #e27329)' : 'rgba(255,255,255,0.06)',
-                      color: '#fff',
-                      border: '1px solid #5c351e',
-                      borderRadius: '8px',
-                      padding: '6px 8px',
-                      fontSize: '0.75rem',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <UtensilsCrossed size={12} /> Mesero
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickRole('chef', demoPinForRole('chef'))}
-                    style={{
-                      flex: 1,
-                      backgroundColor: username === 'chef' ? '#2e7d32' : 'rgba(255,255,255,0.06)',
-                      color: '#fff',
-                      border: '1px solid #5c351e',
-                      borderRadius: '8px',
-                      padding: '6px 8px',
-                      fontSize: '0.75rem',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <ChefHat size={12} /> Cocina
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickRole('admin', demoPinForRole('admin'))}
-                    style={{
-                      flex: 1,
-                      backgroundColor: username === 'admin' ? '#0288d1' : 'rgba(255,255,255,0.06)',
-                      color: '#fff',
-                      border: '1px solid #5c351e',
-                      borderRadius: '8px',
-                      padding: '6px 8px',
-                      fontSize: '0.75rem',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <ShieldAlert size={12} /> Admin
-                  </button>
-                </div>
               </div>
 
               {/* Campo Contraseña / PIN */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '800', color: '#ffcc00', marginBottom: '6px' }}>
-                  Código PIN o Contraseña
+                  PIN o Contraseña
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
-                    placeholder="Ingresa tu clave o PIN..."
+                    disabled={isClosed}
+                    placeholder="Ingresa tu clave..."
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
                     style={{
@@ -415,7 +314,8 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                       fontSize: '1rem',
                       fontWeight: '700',
                       letterSpacing: showPassword ? 'normal' : '2px',
-                      outline: 'none'
+                      outline: 'none',
+                      opacity: isClosed ? 0.6 : 1
                     }}
                   />
                   <button
@@ -441,26 +341,25 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
               {/* Botón de Envío */}
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isClosed}
                 style={{
-                  backgroundColor: 'var(--brand-primary, #e27329)',
+                  backgroundColor: isClosed ? '#424242' : 'var(--brand-primary, #e27329)',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '12px',
                   padding: '14px',
                   fontSize: '1rem',
                   fontWeight: '900',
-                  cursor: 'pointer',
+                  cursor: isClosed ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
-                  marginTop: '8px',
-                  transition: 'transform 0.15s ease'
+                  boxShadow: isClosed ? 'none' : '0 6px 20px rgba(0,0,0,0.5)',
+                  marginTop: '8px'
                 }}
               >
-                {isLoading ? 'Autenticando...' : 'Iniciar Turno de Trabajo'} <ArrowRight size={18} />
+                {isLoading ? 'Autenticando...' : isClosed ? 'Establecimiento Cerrado' : 'Iniciar Turno'} <ArrowRight size={18} />
               </button>
             </form>
 
@@ -504,7 +403,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         )}
 
         {/* ============================================================== */}
-        {/* MODO 2: INGRESAR CÓDIGO DE RESTAURANTE (SIN EXPONER OTROS) */}
+        {/* MODO 2: INGRESAR CÓDIGO DE RESTAURANTE */}
         {/* ============================================================== */}
         {viewMode === 'enter_tenant_code' && (
           <div>
@@ -529,7 +428,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                 Acceso al Restaurante
               </h2>
               <p style={{ fontSize: '0.825rem', color: '#d7ccc8', margin: 0 }}>
-                Ingresa el código único proporcionado por el administrador de tu negocio
+                Ingresa el código único proporcionado por la administración de tu negocio
               </p>
             </div>
 
@@ -552,12 +451,12 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
             <form onSubmit={handleSwitchTenantCode} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '800', color: '#ffb74d', marginBottom: '6px' }}>
-                  Código o Slug del Restaurante
+                  Código o Identificador del Restaurante
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej: rosty-broaster o pizzeria-napoles"
+                  placeholder="Ej: rosty-broaster, pizzeria-napoles..."
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
                   style={{
@@ -592,7 +491,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                   gap: '8px'
                 }}
               >
-                {isLoading ? 'Consultando...' : 'Continuar al Restaurante'} <ArrowRight size={16} />
+                {isLoading ? 'Verificando...' : 'Continuar al Restaurante'} <ArrowRight size={16} />
               </button>
 
               <button
@@ -615,7 +514,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                   marginTop: '6px'
                 }}
               >
-                <ArrowLeft size={14} /> Volver al restaurante anterior
+                <ArrowLeft size={14} /> Volver
               </button>
             </form>
           </div>
@@ -647,7 +546,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                 Administrador Global
               </h2>
               <p style={{ fontSize: '0.825rem', color: '#d7ccc8', margin: 0 }}>
-                Control maestro para crear y gestionar todas las empresas
+                Control maestro para crear, gestionar y cerrar empresas
               </p>
             </div>
 
@@ -675,7 +574,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                 <input
                   type="text"
                   required
-                  placeholder="superadmin"
+                  placeholder="Ingresa tu usuario superadmin..."
                   value={superUser}
                   onChange={(e) => setSuperUser(e.target.value)}
                   style={{

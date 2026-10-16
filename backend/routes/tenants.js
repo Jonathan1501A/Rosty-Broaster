@@ -113,6 +113,85 @@ router.delete('/:id', (req, res) => {
 });
 
 /**
+ * @route POST /api/tenants/notify
+ * @desc Enviar notificación en tiempo real a uno o todos los restaurantes (Exclusivo Superadmin)
+ */
+router.post('/notify', (req, res) => {
+  if (!isSuperadmin(req)) {
+    return res.status(403).json({
+      error: 'Acceso restringido: Solo el Administrador Global puede enviar notificaciones.'
+    });
+  }
+
+  const { tenantId, title, message, type = 'info' } = req.body;
+  if (!message || !message.trim()) {
+    return res.status(400).json({ error: 'El mensaje de notificación es obligatorio.' });
+  }
+
+  const payload = {
+    id: `notif-${Date.now()}`,
+    title: title || 'Comunicado Oficial',
+    message: message.trim(),
+    type,
+    timestamp: new Date().toISOString()
+  };
+
+  const io = req.app.get('io');
+  if (io) {
+    if (!tenantId || tenantId === 'all') {
+      io.emit('superadmin:announcement', payload);
+    } else {
+      io.to(tenantId).emit('superadmin:announcement', payload);
+    }
+  }
+
+  res.json({ message: 'Notificación enviada en tiempo real.', notification: payload });
+});
+
+/**
+ * @route PUT /api/tenants/:id/status
+ * @desc Cambiar estado del restaurante (activo vs cerrado) (Exclusivo Superadmin)
+ */
+router.put('/:id/status', (req, res) => {
+  if (!isSuperadmin(req)) {
+    return res.status(403).json({
+      error: 'Acceso restringido: Solo el Administrador Global puede cambiar el estado de las empresas.'
+    });
+  }
+
+  const { estado } = req.body;
+  const updated = store.updateTenantStatus(req.params.id, estado);
+  if (!updated) return res.status(404).json({ error: 'Restaurante no encontrado.' });
+
+  const io = req.app.get('io');
+  if (io) {
+    io.to(req.params.id).emit('tenant:status_changed', { tenantId: req.params.id, estado: updated.estado });
+    io.emit('tenants:updated', store.getTenants());
+  }
+
+  res.json({ message: `Estado actualizado a "${updated.estado}".`, tenant: updated });
+});
+
+/**
+ * @route PUT /api/tenants/:id/admin
+ * @desc Modificar datos y PIN del administrador de un restaurante (Exclusivo Superadmin)
+ */
+router.put('/:id/admin', (req, res) => {
+  if (!isSuperadmin(req)) {
+    return res.status(403).json({
+      error: 'Acceso restringido: Solo el Administrador Global puede modificar administradores.'
+    });
+  }
+
+  try {
+    const updatedAdmin = store.updateTenantAdmin(req.params.id, req.body);
+    res.json({ message: 'Administrador actualizado con éxito.', admin: updatedAdmin });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
  * @route GET /api/tenants/:id
  * @desc Obtener datos completos de una empresa (configuración y menú)
  */

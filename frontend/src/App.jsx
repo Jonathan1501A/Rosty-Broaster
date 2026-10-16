@@ -344,13 +344,23 @@ export default function App() {
       },
       onStatsUpdated: (updatedStats) => {
         setStats(updatedStats);
+      },
+      onAnnouncement: (announcement) => {
+        const toastType = announcement.type === 'danger' ? 'error' : 'info';
+        addToast(toastType, announcement.message, `📢 ${announcement.title || 'Aviso de la Plataforma'}`);
+      },
+      onTenantStatusChanged: (data) => {
+        if (data.tenantId === currentTenantId && data.estado === 'cerrado') {
+          alert('⚠️ ATENCIÓN: Este restaurante ha sido cerrado o suspendido por la administración de la plataforma. La sesión finalizará de inmediato.');
+          handleLogout();
+        }
       }
     });
 
     return () => {
       disconnectSocket();
     };
-  }, [user, currentTenantId, fetchData, addToast]);
+  }, [user, currentTenantId, fetchData, addToast, handleLogout]);
 
   // Manejar Login Estricto con Empresa y PIN
   const handleLoginSuccess = (authenticatedUser, selectedTenant) => {

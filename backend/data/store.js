@@ -360,6 +360,17 @@ class Store {
 
   // --- GESTIÓN DE EMPRESAS (TENANTS) ---
 
+  getTenantAdmin(tenantId) {
+    const admin = this.users.find(u => u.empresaId === tenantId && u.role === 'admin');
+    if (!admin) return null;
+    return {
+      id: admin.id,
+      username: admin.username,
+      name: admin.name,
+      role: admin.role
+    };
+  }
+
   getTenants() {
     return this.tenants.map(t => ({
       id: t.id,
@@ -371,6 +382,8 @@ class Store {
       telefono: t.telefono,
       direccion: t.direccion,
       whatsappDomiciliario: t.whatsappDomiciliario,
+      estado: t.estado || 'activo',
+      admin: this.getTenantAdmin(t.id),
       totalMesas: t.tables?.length || t.numeroMesas || 10,
       totalOrdenes: t.orders?.length || 0,
       totalVentas: (t.salesHistory || []).reduce((acc, s) => acc + (s.total || 0), 0)
@@ -380,6 +393,43 @@ class Store {
   getTenant(tenantId = 'rosty-broaster') {
     if (!tenantId) return this.tenants[0] || null;
     return this.tenants.find(ten => ten.id === tenantId) || null;
+  }
+
+  updateTenantStatus(tenantId, nuevoEstado) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant) return null;
+    tenant.estado = nuevoEstado === 'cerrado' ? 'cerrado' : 'activo';
+    this.persist();
+    return tenant;
+  }
+
+  updateTenantAdmin(tenantId, { username, name, pin }) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant) throw new Error('Restaurante no encontrado.');
+
+    let admin = this.users.find(u => u.empresaId === tenantId && u.role === 'admin');
+    if (!admin) {
+      admin = {
+        id: `u-${tenantId}-admin`,
+        empresaId: tenantId,
+        username: (username || 'admin').trim().toLowerCase(),
+        name: (name || 'Administrador').trim(),
+        role: 'admin',
+        pinHash: bcrypt.hashSync(pin || 'admin123', 10)
+      };
+      this.users.push(admin);
+    } else {
+      if (username && username.trim()) admin.username = username.trim().toLowerCase();
+      if (name && name.trim()) admin.name = name.trim();
+      if (pin && pin.trim()) admin.pinHash = bcrypt.hashSync(pin.trim(), 10);
+    }
+    this.persist();
+    return {
+      id: admin.id,
+      username: admin.username,
+      name: admin.name,
+      role: admin.role
+    };
   }
 
   deleteTenant(tenantId) {

@@ -19,7 +19,14 @@ import {
   RefreshCw,
   Palette,
   AlertTriangle,
-  X
+  X,
+  Bell,
+  Send,
+  Edit,
+  Power,
+  KeyRound,
+  CheckCircle2,
+  ShieldAlert
 } from 'lucide-react';
 import { api } from '../services/api.js';
 
@@ -30,7 +37,7 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState(null);
 
-  // Modal para crear nueva empresa
+  // 1. Modal para crear nueva empresa
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newTenant, setNewTenant] = useState({
@@ -49,6 +56,26 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
       fondo: '#1a1008',
       superficie: '#2c1810'
     }
+  });
+
+  // 2. Modal para Modificar Administrador de un Restaurante
+  const [adminModal, setAdminModal] = useState({
+    isOpen: false,
+    tenant: null,
+    name: '',
+    username: '',
+    pin: '',
+    isSaving: false
+  });
+
+  // 3. Modal para Enviar Notificaciones en Tiempo Real
+  const [notifyModal, setNotifyModal] = useState({
+    isOpen: false,
+    tenantId: 'all',
+    title: '',
+    message: '',
+    type: 'info',
+    isSending: false
   });
 
   const loadTenants = async () => {
@@ -76,6 +103,100 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
     setTimeout(() => setCopiedId(null), 2500);
   };
 
+  // Cambiar Estado: Activar / Cerrar Restaurante
+  const handleToggleStatus = async (tenant) => {
+    const isCurrentlyClosed = tenant.estado === 'cerrado';
+    const nuevoEstado = isCurrentlyClosed ? 'activo' : 'cerrado';
+
+    const confirmAction = window.confirm(
+      isCurrentlyClosed 
+        ? `¿Deseas REACTIVAR el restaurante "${tenant.nombre}"? Su personal podrá volver a ingresar.`
+        : `⚠️ ¿Deseas CERRAR/SUSPENDER el restaurante "${tenant.nombre}"? Ningún usuario de este negocio podrá ingresar.`
+    );
+
+    if (!confirmAction) return;
+
+    try {
+      await api.updateTenantStatus(tenant.id, nuevoEstado);
+      setTenants((prev) =>
+        prev.map((t) => (t.id === tenant.id ? { ...t, estado: nuevoEstado } : t))
+      );
+      alert(`Restaurante "${tenant.nombre}" ahora está marcado como: ${nuevoEstado.toUpperCase()}.`);
+    } catch (err) {
+      alert(err.message || 'Error al cambiar estado del restaurante');
+    }
+  };
+
+  // Abrir Modal de Modificar Admin
+  const handleOpenAdminModal = (tenant) => {
+    setAdminModal({
+      isOpen: true,
+      tenant,
+      name: tenant.admin?.name || 'Administrador',
+      username: tenant.admin?.username || 'admin',
+      pin: '',
+      isSaving: false
+    });
+  };
+
+  // Guardar Cambios de Admin
+  const handleSaveAdmin = async (e) => {
+    e.preventDefault();
+    if (!adminModal.name.trim() || !adminModal.username.trim()) {
+      alert('Ingresa el nombre y el usuario del administrador.');
+      return;
+    }
+
+    setAdminModal((prev) => ({ ...prev, isSaving: true }));
+
+    try {
+      const updatedAdmin = await api.updateTenantAdmin(adminModal.tenant.id, {
+        name: adminModal.name.trim(),
+        username: adminModal.username.trim(),
+        pin: adminModal.pin.trim() || undefined
+      });
+
+      setTenants((prev) =>
+        prev.map((t) =>
+          t.id === adminModal.tenant.id ? { ...t, admin: updatedAdmin } : t
+        )
+      );
+
+      alert(`Administrador de "${adminModal.tenant.nombre}" actualizado con éxito.\nUsuario: ${updatedAdmin.username}${adminModal.pin ? `\nNuevo PIN: ${adminModal.pin}` : ''}`);
+      setAdminModal({ isOpen: false, tenant: null, name: '', username: '', pin: '', isSaving: false });
+    } catch (err) {
+      alert(err.message || 'Error al actualizar el administrador');
+      setAdminModal((prev) => ({ ...prev, isSaving: false }));
+    }
+  };
+
+  // Enviar Notificación en Tiempo Real
+  const handleSendNotification = async (e) => {
+    e.preventDefault();
+    if (!notifyModal.message.trim()) {
+      alert('Por favor ingresa el mensaje de la notificación.');
+      return;
+    }
+
+    setNotifyModal((prev) => ({ ...prev, isSending: true }));
+
+    try {
+      await api.sendSuperadminNotification({
+        tenantId: notifyModal.tenantId,
+        title: notifyModal.title.trim() || 'Aviso de la Plataforma',
+        message: notifyModal.message.trim(),
+        type: notifyModal.type
+      });
+
+      alert('¡Notificación enviada con éxito en tiempo real a los restaurantes!');
+      setNotifyModal({ isOpen: false, tenantId: 'all', title: '', message: '', type: 'info', isSending: false });
+    } catch (err) {
+      alert(err.message || 'Error al enviar la notificación');
+      setNotifyModal((prev) => ({ ...prev, isSending: false }));
+    }
+  };
+
+  // Eliminar Empresa
   const handleDeleteTenant = async (tenant) => {
     const confirmName = window.prompt(
       `⚠️ ATENCIÓN: Esta acción eliminará permanentemente a "${tenant.nombre}" y todos sus usuarios, mesas y ventas.\n\nEscribe exactamente "${tenant.id}" para confirmar:`
@@ -95,6 +216,7 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
     }
   };
 
+  // Registrar Nueva Empresa
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!newTenant.nombre.trim()) {
@@ -189,6 +311,27 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Botón Mandar Notificación */}
+          <button
+            onClick={() => setNotifyModal((prev) => ({ ...prev, isOpen: true }))}
+            style={{
+              backgroundColor: '#0288d1',
+              color: '#fff',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '10px',
+              fontSize: '0.825rem',
+              fontWeight: '800',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(2, 136, 209, 0.35)'
+            }}
+          >
+            <Bell size={16} /> Enviar Notificación
+          </button>
+
           <div
             style={{
               backgroundColor: '#1b0e07',
@@ -220,8 +363,7 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              cursor: 'pointer',
-              transition: 'background 0.2s'
+              cursor: 'pointer'
             }}
           >
             <LogOut size={16} /> Cerrar Sesión
@@ -357,26 +499,28 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
             {filteredTenants.map((t) => {
               const primaryColor = t.colores?.primario || '#ff9800';
               const isCopied = copiedId === t.id;
+              const isClosed = t.estado === 'cerrado';
 
               return (
                 <div
                   key={t.id}
                   style={{
                     backgroundColor: '#26140b',
-                    border: `2px solid ${primaryColor}`,
+                    border: `2px solid ${isClosed ? '#757575' : primaryColor}`,
                     borderRadius: '20px',
                     padding: '22px',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    gap: '18px',
+                    gap: '16px',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                    position: 'relative'
+                    position: 'relative',
+                    opacity: isClosed ? 0.78 : 1
                   }}
                 >
                   {/* Card Header */}
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div
                           style={{
@@ -384,7 +528,7 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
                             height: '48px',
                             borderRadius: '14px',
                             backgroundColor: 'rgba(255,255,255,0.08)',
-                            border: `2px solid ${primaryColor}`,
+                            border: `2px solid ${isClosed ? '#757575' : primaryColor}`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -413,23 +557,47 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => handleDeleteTenant(t)}
-                        title="Eliminar esta empresa permanentemente"
-                        style={{
-                          backgroundColor: 'rgba(198, 40, 40, 0.15)',
-                          border: '1px solid #c62828',
-                          color: '#ff5252',
-                          borderRadius: '8px',
-                          padding: '6px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {/* Estado Badge & Acciones */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          onClick={() => handleToggleStatus(t)}
+                          title={isClosed ? 'Haz clic para Reactivar este restaurante' : 'Haz clic para Cerrar/Suspender este restaurante'}
+                          style={{
+                            backgroundColor: isClosed ? 'rgba(198, 40, 40, 0.2)' : 'rgba(46, 125, 50, 0.2)',
+                            border: `1.5px solid ${isClosed ? '#ff5252' : '#4caf50'}`,
+                            color: isClosed ? '#ff5252' : '#81c784',
+                            borderRadius: '8px',
+                            padding: '4px 8px',
+                            fontSize: '0.72rem',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Power size={12} />
+                          {isClosed ? 'CERRADO' : 'ACTIVO'}
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteTenant(t)}
+                          title="Eliminar esta empresa permanentemente"
+                          style={{
+                            backgroundColor: 'rgba(198, 40, 40, 0.15)',
+                            border: '1px solid #c62828',
+                            color: '#ff5252',
+                            borderRadius: '8px',
+                            padding: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </div>
 
-                    <p style={{ margin: '0 0 14px 0', fontSize: '0.825rem', color: '#d7ccc8', fontStyle: 'italic' }}>
+                    <p style={{ margin: '0 0 12px 0', fontSize: '0.825rem', color: '#d7ccc8', fontStyle: 'italic' }}>
                       "{t.slogan || 'Sin slogan'}"
                     </p>
 
@@ -441,8 +609,28 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
                       <div>
                         <span style={{ color: '#ffb74d', fontWeight: '700' }}>WhatsApp:</span> {t.whatsappDomiciliario || 'N/A'}
                       </div>
-                      <div style={{ gridColumn: 'span 2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        <span style={{ color: '#ffb74d', fontWeight: '700' }}>Dir:</span> {t.direccion || 'Sin dirección registrada'}
+                      <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>
+                          <span style={{ color: '#ffb74d', fontWeight: '700' }}>Admin Actual:</span> {t.admin?.name || 'Admin'} (@{t.admin?.username || 'admin'})
+                        </span>
+                        <button
+                          onClick={() => handleOpenAdminModal(t)}
+                          style={{
+                            backgroundColor: 'rgba(255, 152, 0, 0.15)',
+                            color: '#ffcc00',
+                            border: '1px solid #ff9800',
+                            borderRadius: '6px',
+                            padding: '3px 8px',
+                            fontSize: '0.72rem',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Edit size={11} /> Modificar
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -494,7 +682,7 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
                       <button
                         onClick={() => onSelectTenantToOpen(t)}
                         style={{
-                          backgroundColor: primaryColor,
+                          backgroundColor: isClosed ? '#616161' : primaryColor,
                           color: '#fff',
                           border: 'none',
                           borderRadius: '10px',
@@ -520,7 +708,7 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
         )}
       </main>
 
-      {/* Modal Crear Nueva Empresa */}
+      {/* Modal 1: Registrar Nueva Empresa */}
       {isModalOpen && (
         <div
           style={{
@@ -708,6 +896,259 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
                   style={{ backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 24px', fontWeight: '800', cursor: 'pointer' }}
                 >
                   {isCreating ? 'Registrando...' : 'Confirmar y Crear Empresa'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2: Modificar Administrador */}
+      {adminModal.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            zIndex: 9999
+          }}
+          onClick={() => setAdminModal((prev) => ({ ...prev, isOpen: false }))}
+        >
+          <div
+            style={{
+              backgroundColor: '#26140b',
+              border: '3px solid #ff9800',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '500px',
+              padding: '26px',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.9)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', color: '#ffcc00' }}>
+                  Modificar Administrador
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#d7ccc8' }}>
+                  Restaurante: {adminModal.tenant?.nombre}
+                </p>
+              </div>
+              <button
+                onClick={() => setAdminModal((prev) => ({ ...prev, isOpen: false }))}
+                style={{ backgroundColor: 'transparent', border: 'none', color: '#d7ccc8', cursor: 'pointer' }}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#ffb74d', display: 'block', marginBottom: '6px' }}>
+                  Nombre Completo del Administrador
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={adminModal.name}
+                  onChange={(e) => setAdminModal({ ...adminModal, name: e.target.value })}
+                  style={{ width: '100%', backgroundColor: '#1a0d06', border: '1.5px solid #4a2815', borderRadius: '10px', padding: '10px', color: '#fff', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#ffb74d', display: 'block', marginBottom: '6px' }}>
+                  Nombre de Usuario (Login)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={adminModal.username}
+                  onChange={(e) => setAdminModal({ ...adminModal, username: e.target.value })}
+                  style={{ width: '100%', backgroundColor: '#1a0d06', border: '1.5px solid #4a2815', borderRadius: '10px', padding: '10px', color: '#fff', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#ffb74d', display: 'block', marginBottom: '6px' }}>
+                  Nueva Contraseña / PIN (Opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Dejar en blanco para conservar el actual"
+                  value={adminModal.pin}
+                  onChange={(e) => setAdminModal({ ...adminModal, pin: e.target.value })}
+                  style={{ width: '100%', backgroundColor: '#1a0d06', border: '1.5px solid #4a2815', borderRadius: '10px', padding: '10px', color: '#fff', outline: 'none' }}
+                />
+                <span style={{ fontSize: '0.72rem', color: '#a1887f', marginTop: '4px', display: 'block' }}>
+                  Escribe un nuevo PIN solo si deseas resetear el acceso del administrador.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setAdminModal((prev) => ({ ...prev, isOpen: false }))}
+                  style={{ backgroundColor: '#3e2723', color: '#d7ccc8', border: 'none', borderRadius: '10px', padding: '10px 16px', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={adminModal.isSaving}
+                  style={{ backgroundColor: '#2e7d32', color: '#fff', border: 'none', borderRadius: '10px', padding: '10px 20px', fontWeight: '800', cursor: 'pointer' }}
+                >
+                  {adminModal.isSaving ? 'Guardando...' : 'Guardar Administrador'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 3: Enviar Notificaciones en Tiempo Real */}
+      {notifyModal.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            zIndex: 9999
+          }}
+          onClick={() => setNotifyModal((prev) => ({ ...prev, isOpen: false }))}
+        >
+          <div
+            style={{
+              backgroundColor: '#26140b',
+              border: '3px solid #0288d1',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '560px',
+              padding: '26px',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.9)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(2, 136, 209, 0.2)', border: '1.5px solid #0288d1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#29b6f6' }}>
+                  <Bell size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', color: '#29b6f6' }}>
+                    Enviar Notificación en Vivo
+                  </h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#d7ccc8' }}>
+                    Aparecerá instantáneamente en las pantallas activas de los restaurantes
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setNotifyModal((prev) => ({ ...prev, isOpen: false }))}
+                style={{ backgroundColor: 'transparent', border: 'none', color: '#d7ccc8', cursor: 'pointer' }}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendNotification} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#90caf9', display: 'block', marginBottom: '6px' }}>
+                    Destinatario
+                  </label>
+                  <select
+                    value={notifyModal.tenantId}
+                    onChange={(e) => setNotifyModal({ ...notifyModal, tenantId: e.target.value })}
+                    style={{ width: '100%', backgroundColor: '#1a0d06', border: '1.5px solid #4a2815', borderRadius: '10px', padding: '10px', color: '#fff', outline: 'none' }}
+                  >
+                    <option value="all">📢 Todos los Restaurantes (Global)</option>
+                    {tenants.map((t) => (
+                      <option key={t.id} value={t.id}>🏢 {t.nombre} ({t.id})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#90caf9', display: 'block', marginBottom: '6px' }}>
+                    Tipo de Aviso
+                  </label>
+                  <select
+                    value={notifyModal.type}
+                    onChange={(e) => setNotifyModal({ ...notifyModal, type: e.target.value })}
+                    style={{ width: '100%', backgroundColor: '#1a0d06', border: '1.5px solid #4a2815', borderRadius: '10px', padding: '10px', color: '#fff', outline: 'none' }}
+                  >
+                    <option value="info">🔵 Informativo</option>
+                    <option value="warning">🟡 Alerta</option>
+                    <option value="danger">🔴 Urgente</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#90caf9', display: 'block', marginBottom: '6px' }}>
+                  Título del Comunicado
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Mantenimiento programado hoy a las 11:00 PM"
+                  value={notifyModal.title}
+                  onChange={(e) => setNotifyModal({ ...notifyModal, title: e.target.value })}
+                  style={{ width: '100%', backgroundColor: '#1a0d06', border: '1.5px solid #4a2815', borderRadius: '10px', padding: '10px', color: '#fff', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#90caf9', display: 'block', marginBottom: '6px' }}>
+                  Mensaje *
+                </label>
+                <textarea
+                  required
+                  rows="3"
+                  placeholder="Escribe el mensaje que se mostrará en las pantallas..."
+                  value={notifyModal.message}
+                  onChange={(e) => setNotifyModal({ ...notifyModal, message: e.target.value })}
+                  style={{ width: '100%', backgroundColor: '#1a0d06', border: '1.5px solid #4a2815', borderRadius: '10px', padding: '10px', color: '#fff', outline: 'none', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setNotifyModal((prev) => ({ ...prev, isOpen: false }))}
+                  style={{ backgroundColor: '#3e2723', color: '#d7ccc8', border: 'none', borderRadius: '10px', padding: '10px 16px', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={notifyModal.isSending}
+                  style={{
+                    backgroundColor: '#0288d1',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '10px 20px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Send size={15} />
+                  {notifyModal.isSending ? 'Transmitiendo...' : 'Transmitir Notificación'}
                 </button>
               </div>
             </form>

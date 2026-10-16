@@ -104,6 +104,39 @@ export const api = {
     return data;
   },
 
+  updateTenantStatus: async (tenantId, estado) => {
+    const res = await fetch(`${API_URL}/api/tenants/${tenantId}/status`, {
+      method: 'PUT',
+      headers: getHeaders('global'),
+      body: JSON.stringify({ estado })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al cambiar estado del restaurante');
+    return data;
+  },
+
+  updateTenantAdmin: async (tenantId, adminData) => {
+    const res = await fetch(`${API_URL}/api/tenants/${tenantId}/admin`, {
+      method: 'PUT',
+      headers: getHeaders('global'),
+      body: JSON.stringify(adminData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al actualizar el administrador');
+    return data.admin;
+  },
+
+  sendSuperadminNotification: async ({ tenantId, title, message, type }) => {
+    const res = await fetch(`${API_URL}/api/tenants/notify`, {
+      method: 'POST',
+      headers: getHeaders('global'),
+      body: JSON.stringify({ tenantId, title, message, type })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al enviar notificación');
+    return data;
+  },
+
   getTenant: async (tenantId) => {
     const res = await fetch(`${API_URL}/api/tenants/${tenantId}`);
     if (!res.ok) throw new Error('Restaurante no encontrado');
