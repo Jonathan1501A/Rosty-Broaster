@@ -725,7 +725,7 @@ class Store {
     }
 
     tenant.orders = tenant.orders.map((o) =>
-      o.destino === `Mesa ${numero}` ? { ...o, estado: 'Despachado', updatedAt: new Date().toISOString() } : o
+      o.destino === `Mesa ${numero}` ? { ...o, estado: 'Despachado', cobrado: true, updatedAt: new Date().toISOString() } : o
     );
 
     tenant.tables[tableIndex] = {
@@ -757,6 +757,7 @@ class Store {
       items: orderData.items || [],
       total: Number(orderData.total) || 0,
       estado: 'En preparación',
+      cobrado: false,
       createdAt: new Date().toISOString(),
       minutos: 0,
       limite: orderData.tipo === 'delivery' ? 20 : 15
@@ -779,27 +780,60 @@ class Store {
 
     order.estado = estado;
     order.updatedAt = new Date().toISOString();
+    if (estado === 'Despachado' && !order.despachadoAt) {
+      order.despachadoAt = new Date().toISOString();
+    }
 
-    if (estado === 'Despachado') {
-      const alreadyInHistory = tenant.salesHistory.some((s) => s.ordenId === orderId);
-      if (!alreadyInHistory) {
-        tenant.salesHistory.unshift({
-          id: `REC-${Date.now().toString().slice(-4)}`,
+    // NOTA OPERATIVA: La cocina únicamente actualiza el estado de preparación y despacho.
+    // NUNCA inserta ventas en salesHistory para evitar duplicados con caja / meseros.
+
+    this.persist();
+    return order;
+  }
+
+  // Liquidación / Cobro de Domicilios y Pedidos (individual o masivo al cierre de ruta)
+  settleOrders(tenantId, { orderIds = [], metodoPago = 'efectivo', montoRecibido = 0, atendidoPor = 'Caja' }) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant) return { settledOrders: [], receipts: [] };
+
+    const idsToSettle = Array.isArray(orderIds) ? orderIds : [orderIds];
+    const settledOrders = [];
+    const receipts = [];
+
+    for (const orderId of idsToSettle) {
+      const order = tenant.orders.find((o) => o.id === orderId);
+      if (!order) continue;
+
+      order.cobrado = true;
+      order.liquidadoAt = new Date().toISOString();
+      order.metodoPago = metodoPago || 'efectivo';
+      if (order.estado !== 'Despachado') {
+        order.estado = 'Despachado';
+      }
+      settledOrders.push(order);
+
+      // Verificar que no exista ya un recibo con este ID para evitar duplicidad
+      const alreadyInHistory = (tenant.salesHistory || []).some((s) => s.ordenId === order.id);
+      if (!alreadyInHistory && order.total > 0) {
+        const receipt = {
+          id: `REC-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 900 + 100)}`,
           ordenId: order.id,
           destino: order.destino,
           cliente: order.cliente,
           total: order.total,
-          metodoPago: 'efectivo',
-          montoRecibido: order.total,
-          cambio: 0,
-          despachadoPor: 'Cocina/Despacho',
+          metodoPago: metodoPago || 'efectivo',
+          montoRecibido: Number(montoRecibido) > 0 ? Number(montoRecibido) : order.total,
+          cambio: Math.max(0, (Number(montoRecibido) || order.total) - order.total),
+          despachadoPor: atendidoPor || 'Caja / Domicilios',
           timestamp: new Date().toISOString()
-        });
+        };
+        tenant.salesHistory.unshift(receipt);
+        receipts.push(receipt);
       }
     }
 
     this.persist();
-    return order;
+    return { settledOrders, receipts };
   }
 
   toggleOrderItem(tenantId, orderId, itemId) {

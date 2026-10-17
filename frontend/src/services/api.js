@@ -272,6 +272,20 @@ export const api = {
     return data.order;
   },
 
+  settleOrders: async (orderIds, payload = {}, tenantId) => {
+    const res = await fetch(`${API_URL}/api/orders/settle`, {
+      method: 'POST',
+      headers: getHeaders(tenantId),
+      body: JSON.stringify({
+        orderIds,
+        ...payload
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al liquidar pedidos');
+    return data;
+  },
+
   // Métricas y Auditoría
   getStats: async (tenantId) => {
     const res = await fetch(`${API_URL}/api/stats`, { headers: getHeaders(tenantId) });

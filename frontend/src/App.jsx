@@ -12,6 +12,7 @@ import UserManagementModal from './components/UserManagementModal.jsx';
 import MenuManagementModal from './components/MenuManagementModal.jsx';
 import CloseCashModal from './components/CloseCashModal.jsx';
 import SuperAdminView from './components/SuperAdminView.jsx';
+import DeliveriesView from './components/DeliveriesView.jsx';
 import Toast from './components/Toast.jsx';
 
 import { api } from './services/api.js';
@@ -578,6 +579,39 @@ export default function App() {
     }
   };
 
+  // Liquidar uno o varios domicilios entregados
+  const handleSettleOrders = async (orderIds, payload) => {
+    // Actualizar estado local inmediato
+    setOrders((prev) =>
+      prev.map((o) =>
+        orderIds.includes(o.id)
+          ? { ...o, cobrado: true, estado: 'Despachado', metodoPago: payload.metodoPago || 'efectivo', liquidadoAt: new Date().toISOString() }
+          : o
+      )
+    );
+
+    addToast(
+      'success',
+      `${orderIds.length} ${orderIds.length === 1 ? 'domicilio cobrado' : 'domicilios liquidados'} con método ${payload.metodoPago || 'efectivo'}.`,
+      '💰 Domicilios Registrados en Caja'
+    );
+
+    // Sincronizar por BroadcastChannel
+    try {
+      const channel = new BroadcastChannel(`tenant_sync_${currentTenantId}`);
+      channel.postMessage({ type: 'SETTLE_ORDERS', payload: { orderIds, ...payload } });
+      channel.close();
+    } catch (e) {}
+
+    // Sincronizar con API backend
+    try {
+      await api.settleOrders(orderIds, { ...payload, atendidoPor: user.name || user.username }, currentTenantId);
+      api.getStats(currentTenantId).then((st) => setStats(st)).catch(() => {});
+    } catch (err) {
+      console.debug('Liquidación guardada localmente:', err.message);
+    }
+  };
+
   // Actualizar estado de comanda desde Cocina KDS
   const handleUpdateOrderStatus = async (orderId, nuevoEstado) => {
     setOrders((prev) =>
@@ -633,6 +667,9 @@ export default function App() {
 
   // Conteo de pedidos pendientes para el badge de cocina
   const pendingOrdersCount = orders.filter((o) => (o.estado || '').toLowerCase() !== 'listo' && (o.estado || '').toLowerCase() !== 'despachado').length;
+
+  // Conteo de domicilios pendientes de cobro para el badge de navegación
+  const pendingDeliveriesCount = orders.filter((o) => o.tipo === 'delivery' && !o.cobrado).length;
 
   // Si no está autenticado, mostrar Login Modal estricto con selector de empresa
   if (!user) {
@@ -700,19 +737,32 @@ export default function App() {
         onOpenCloseCash={() => setIsCloseCashOpen(true)}
         isConnected={isConnected}
         pendingOrdersCount={pendingOrdersCount}
+        pendingDeliveriesCount={pendingDeliveriesCount}
       />
 
       {/* Contenido Principal con Aislamiento Estricto por Rol */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* EL MESERO SOLO PUEDE VER SALÓN Y MESAS */}
+        {/* EL MESERO PUEDE NAVEGAR ENTRE SALÓN Y DOMICILIOS */}
         {role === 'waiter' && (
-          <TablesView
-            tables={tables}
-            onOpenTableOrder={handleOpenTableOrder}
-            onStartDelivery={handleStartDelivery}
-            onStartTakeout={handleStartTakeout}
-            onOpenCheckout={handleOpenCheckout}
-          />
+          <>
+            {activeTab === 'deliveries' ? (
+              <DeliveriesView
+                orders={orders}
+                tenant={tenant}
+                onSettleOrders={handleSettleOrders}
+                onStartDelivery={handleStartDelivery}
+                onUpdateStatus={handleUpdateOrderStatus}
+              />
+            ) : (
+              <TablesView
+                tables={tables}
+                onOpenTableOrder={handleOpenTableOrder}
+                onStartDelivery={handleStartDelivery}
+                onStartTakeout={handleStartTakeout}
+                onOpenCheckout={handleOpenCheckout}
+              />
+            )}
+          </>
         )}
 
         {/* EL CHEF SOLO PUEDE VER MONITOR DE COCINA KDS */}
@@ -725,7 +775,7 @@ export default function App() {
           />
         )}
 
-        {/* EL ADMINISTRADOR PUEDE NAVEGAR ENTRE REPORTES, MESAS Y COCINA */}
+        {/* EL ADMINISTRADOR PUEDE NAVEGAR ENTRE REPORTES, MESAS, DOMICILIOS Y COCINA */}
         {role === 'admin' && (
           <>
             {activeTab === 'reports' && (
@@ -742,6 +792,15 @@ export default function App() {
                 onStartDelivery={handleStartDelivery}
                 onStartTakeout={handleStartTakeout}
                 onOpenCheckout={handleOpenCheckout}
+              />
+            )}
+            {activeTab === 'deliveries' && (
+              <DeliveriesView
+                orders={orders}
+                tenant={tenant}
+                onSettleOrders={handleSettleOrders}
+                onStartDelivery={handleStartDelivery}
+                onUpdateStatus={handleUpdateOrderStatus}
               />
             )}
             {activeTab === 'kitchen' && (

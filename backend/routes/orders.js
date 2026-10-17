@@ -141,4 +141,35 @@ router.patch('/:id/items/:itemId/toggle', (req, res) => {
   });
 });
 
+/**
+ * @route POST /api/orders/settle
+ * @desc Cobrar / Liquidar domicilios y pedidos (individual o masivo al cierre)
+ */
+router.post('/settle', (req, res) => {
+  const tenantId = getTenantId(req);
+  const { orderIds, metodoPago, montoRecibido, atendidoPor } = req.body;
+
+  if (!orderIds || (Array.isArray(orderIds) && orderIds.length === 0)) {
+    return res.status(400).json({ error: 'Debes proporcionar al menos un ID de orden para liquidar.' });
+  }
+
+  const result = store.settleOrders(tenantId, {
+    orderIds,
+    metodoPago: metodoPago || 'efectivo',
+    montoRecibido: Number(montoRecibido) || 0,
+    atendidoPor: atendidoPor || 'Caja / Domicilios'
+  });
+
+  const io = req.app.get('io');
+  if (io) {
+    io.to(tenantId).emit('orders:settled', result);
+    io.to(tenantId).emit('stats:updated', store.getStats(tenantId));
+  }
+
+  res.json({
+    message: 'Domicilios liquidados y registrados en caja con éxito.',
+    ...result
+  });
+});
+
 export default router;

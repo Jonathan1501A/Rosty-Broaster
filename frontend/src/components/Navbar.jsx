@@ -13,7 +13,8 @@ import {
   Settings,
   Users,
   DollarSign,
-  Building2
+  Building2,
+  Bike
 } from 'lucide-react';
 import { toggleSound, getSoundEnabled } from '../services/sound.js';
 
@@ -29,7 +30,8 @@ export default function Navbar({
   onOpenMenu,
   onOpenCloseCash,
   isConnected,
-  pendingOrdersCount = 0 
+  pendingOrdersCount = 0,
+  pendingDeliveriesCount = 0
 }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [soundOn, setSoundOn] = useState(() => getSoundEnabled());
@@ -127,22 +129,63 @@ export default function Navbar({
       {/* Control Estricto de Roles (RBAC en Navegación) */}
       <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         {role === 'waiter' && (
-          <div
-            style={{
-              backgroundColor: 'var(--bg-app, #2b180d)',
-              border: '1.5px solid var(--brand-primary, #e27329)',
-              color: 'var(--brand-gold, #ffcc00)',
-              padding: '8px 16px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: '800',
-              fontSize: '0.85rem'
-            }}
-          >
-            <UtensilsCrossed size={17} color="var(--brand-primary, #e27329)" />
-            <span>MÓDULO DE MESERO: SALÓN Y COMANDAS</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('tables')}
+              style={{
+                backgroundColor: activeTab === 'tables' ? 'var(--brand-primary, #e27329)' : '#2b180d',
+                color: activeTab === 'tables' ? '#fff' : '#fbeee0',
+                padding: '7px 14px',
+                borderRadius: '10px',
+                border: activeTab === 'tables' ? '1.5px solid var(--brand-gold, #ffcc00)' : '1.5px solid #5c351e',
+                fontSize: '0.825rem',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <UtensilsCrossed size={16} />
+              <span>Salón / Mesas</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('deliveries')}
+              style={{
+                backgroundColor: activeTab === 'deliveries' ? '#0288d1' : '#2b180d',
+                color: activeTab === 'deliveries' ? '#fff' : '#fbeee0',
+                padding: '7px 14px',
+                borderRadius: '10px',
+                border: activeTab === 'deliveries' ? '1.5px solid #4fc3f7' : '1.5px solid #5c351e',
+                fontSize: '0.825rem',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <Bike size={16} />
+              <span>Domicilios</span>
+              {pendingDeliveriesCount > 0 && (
+                <span
+                  style={{
+                    backgroundColor: '#e27329',
+                    color: '#fff',
+                    fontSize: '0.72rem',
+                    fontWeight: '900',
+                    padding: '2px 7px',
+                    borderRadius: '999px',
+                    marginLeft: '2px'
+                  }}
+                >
+                  {pendingDeliveriesCount}
+                </span>
+              )}
+            </button>
           </div>
         )}
 
@@ -224,6 +267,42 @@ export default function Navbar({
             >
               <UtensilsCrossed size={15} />
               <span>Mesas</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('deliveries')}
+              style={{
+                backgroundColor: activeTab === 'deliveries' ? '#0288d1' : '#2b180d',
+                color: activeTab === 'deliveries' ? '#fff' : '#fbeee0',
+                padding: '7px 13px',
+                borderRadius: '10px',
+                border: activeTab === 'deliveries' ? '1.5px solid #4fc3f7' : '1.5px solid #5c351e',
+                fontSize: '0.8rem',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <Bike size={15} />
+              <span>Domicilios</span>
+              {pendingDeliveriesCount > 0 && (
+                <span
+                  style={{
+                    backgroundColor: '#e27329',
+                    color: '#fff',
+                    fontSize: '0.7rem',
+                    fontWeight: '900',
+                    padding: '1px 6px',
+                    borderRadius: '999px',
+                    marginLeft: '2px'
+                  }}
+                >
+                  {pendingDeliveriesCount}
+                </span>
+              )}
             </button>
 
             <button
