@@ -32,7 +32,7 @@ router.get('/', (req, res) => {
  */
 router.post('/', orderLimiter, (req, res) => {
   const tenantId = getTenantId(req);
-  const { tipo, destino, cliente, datosExtra, items, total, mesaNumero, domiciliarioId, domiciliarioNombre, domiciliarioTelefono } = req.body;
+  const { id, tipo, destino, cliente, datosExtra, items, total, mesaNumero, domiciliarioId, domiciliarioNombre, domiciliarioTelefono } = req.body;
 
   if (!tipo || !['dine_in', 'delivery', 'takeout'].includes(tipo)) {
     return res.status(400).json({ error: 'Tipo de servicio no válido (dine_in, delivery, takeout).' });
@@ -63,6 +63,7 @@ router.post('/', orderLimiter, (req, res) => {
   const cleanTotal = cleanItems.reduce((acc, curr) => acc + curr.price * curr.cantidad, 0);
 
   const newOrder = store.addOrder(tenantId, {
+    id: id ? String(id).trim() : undefined,
     tipo,
     destino: cleanDestino,
     cliente: cleanCliente,

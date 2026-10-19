@@ -41,7 +41,19 @@ const generateTables = (count = 10, existingTables = [], tenantId = '') => {
 const getInitialOrders = (tenantId) => {
   try {
     const saved = localStorage.getItem(`rosty_orders_${tenantId}`);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        // Garantizar que no existan duplicados residuales en localStorage
+        const map = new Map();
+        for (const item of parsed) {
+          if (item && item.id && !map.has(item.id)) {
+            map.set(item.id, item);
+          }
+        }
+        return Array.from(map.values());
+      }
+    }
   } catch (e) {}
   return [];
 };
@@ -64,6 +76,9 @@ export default function App() {
     return currentUser?.role === 'chef' ? 'kitchen' : currentUser?.role === 'admin' ? 'reports' : 'tables';
   });
   const [isConnected, setIsConnected] = useState(false);
+
+  // Registro de IDs de comandas enviadas localmente para evitar ecos duplicados
+  const sentOrderIdsRef = useRef(new Set());
 
   // Datos principales estrictamente aislados por restaurante
   const [tables, setTables] = useState(() => getInitialTables(getStoredTenant()));
@@ -145,7 +160,12 @@ export default function App() {
       channel.onmessage = (event) => {
         const { type, payload } = event.data || {};
         if (type === 'NEW_ORDER' && payload) {
-          setOrders((prev) => [payload, ...prev.filter((o) => o.id !== payload.id)]);
+          setOrders((prev) => {
+            if (prev.some((o) => o.id === payload.id)) {
+              return prev.map((o) => (o.id === payload.id ? { ...o, ...payload } : o));
+            }
+            return [payload, ...prev];
+          });
           playNewOrderSound();
           addToast('success', `Comanda #${payload.id} (${payload.destino}) inyectada en cocina.`, '🔥 Nueva Comanda');
         } else if (type === 'UPDATE_ORDER' && payload) {
@@ -161,6 +181,14 @@ export default function App() {
               )
             );
           }
+        } else if (type === 'SETTLE_ORDERS' && payload) {
+          setOrders((prev) =>
+            prev.map((o) =>
+              payload.orderIds?.includes(o.id)
+                ? { ...o, cobrado: true, estado: 'Despachado', metodoPago: payload.metodoPago || 'efectivo' }
+                : o
+            )
+          );
         } else if (type === 'UPDATE_TABLES' && payload) {
           setTables(payload);
         }
@@ -227,9 +255,20 @@ export default function App() {
         }
       },
       onOrderCreated: (newOrder) => {
-        setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
-        playNewOrderSound();
-        addToast('success', `Comanda #${newOrder.id} (${newOrder.destino}) inyectada en cocina.`, '🔥 Nueva Comanda');
+        if (!newOrder || !newOrder.id) return;
+        const isLocallySent = sentOrderIdsRef.current.has(newOrder.id);
+
+        setOrders((prev) => {
+          if (prev.some((o) => o.id === newOrder.id)) {
+            return prev.map((o) => (o.id === newOrder.id ? { ...o, ...newOrder } : o));
+          }
+          return [newOrder, ...prev];
+        });
+
+        if (!isLocallySent) {
+          playNewOrderSound();
+          addToast('success', `Comanda #${newOrder.id} (${newOrder.destino}) inyectada en cocina.`, '🔥 Nueva Comanda');
+        }
       },
       onOrderUpdated: (updatedOrder) => {
         setOrders((prev) =>
@@ -414,9 +453,17 @@ export default function App() {
 
   // Enviar pedido NUEVO desde OrderDrawer
   const handleSendOrder = async (orderPayload) => {
-    const localId = `ORD-${Date.now().toString().slice(-4)}`;
+    // Generar un ID único compartido entre el cliente, Socket.IO y la base de datos
+    const orderId = orderPayload.id || `ORD-${Date.now().toString().slice(-4)}`;
+
+    // Registrar para suprimir sonido/toast duplicado en la pestaña emisora
+    sentOrderIdsRef.current.add(orderId);
+    setTimeout(() => {
+      sentOrderIdsRef.current.delete(orderId);
+    }, 10000);
+
     const newOrder = {
-      id: localId,
+      id: orderId,
       empresaId: currentTenantId,
       tipo: orderPayload.tipo,
       destino: orderPayload.destino,
@@ -431,7 +478,13 @@ export default function App() {
       domiciliarioTelefono: orderPayload.domiciliarioTelefono || null
     };
 
-    setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
+    // Inserción optimista estricta sin duplicados
+    setOrders((prev) => {
+      if (prev.some((o) => o.id === orderId)) {
+        return prev.map((o) => (o.id === orderId ? { ...o, ...newOrder } : o));
+      }
+      return [newOrder, ...prev];
+    });
 
     if (orderPayload.tipo === 'dine_in' && orderPayload.mesaNumero) {
       setTables((prev) =>
@@ -444,7 +497,7 @@ export default function App() {
     }
 
     playNewOrderSound();
-    addToast('success', `Comanda #${newOrder.id} (${newOrder.destino}) enviada a la cocina.`, '🔥 ¡Comanda en Cocina!');
+    addToast('success', `Comanda #${orderId} (${newOrder.destino}) enviada a la cocina.`, '🔥 ¡Comanda en Cocina!');
 
     // Notificar por BroadcastChannel exclusivo de esta empresa
     try {
@@ -453,14 +506,27 @@ export default function App() {
       channel.close();
     } catch (e) {}
 
-    // Sincronizar en segundo plano con el backend
+    // Sincronizar con el backend con el ID unificado
     try {
       const serverOrder = await api.createOrder(
-        { ...orderPayload, empresaId: currentTenantId }, 
+        { ...orderPayload, id: orderId, empresaId: currentTenantId }, 
         currentTenantId
       );
       if (serverOrder && serverOrder.id) {
-        setOrders((prev) => prev.map((o) => (o.id === localId ? serverOrder : o)));
+        setOrders((prev) => {
+          const map = new Map();
+          for (const item of prev) {
+            if (item.id === orderId) {
+              map.set(item.id, { ...item, ...serverOrder });
+            } else if (!map.has(item.id)) {
+              map.set(item.id, item);
+            }
+          }
+          if (!map.has(serverOrder.id)) {
+            return [serverOrder, ...Array.from(map.values())];
+          }
+          return Array.from(map.values());
+        });
       }
     } catch (err) {
       console.debug('Comanda persistida localmente:', err.message);

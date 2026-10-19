@@ -655,8 +655,13 @@ class Store {
 
   addOrder(tenantId, orderData) {
     const tenant = this.getTenant(tenantId);
-    const newOrder = {
-      id: orderData.id || `ORD-${Date.now().toString().slice(-4)}`,
+    if (!tenant) return null;
+
+    const orderId = orderData.id ? String(orderData.id).trim() : `ORD-${Date.now().toString().slice(-4)}`;
+    const existingIndex = tenant.orders.findIndex((o) => o.id === orderId);
+
+    const orderToSave = {
+      id: orderId,
       empresaId: tenant.id,
       tipo: orderData.tipo,
       destino: orderData.destino,
@@ -664,23 +669,30 @@ class Store {
       datosExtra: orderData.datosExtra || '',
       items: orderData.items || [],
       total: Number(orderData.total) || 0,
-      estado: 'En preparación',
-      cobrado: false,
+      estado: orderData.estado || 'En preparación',
+      cobrado: Boolean(orderData.cobrado) || false,
       mesaNumero: orderData.tipo === 'dine_in' ? Number(orderData.mesaNumero) : null,
       domiciliarioId: orderData.domiciliarioId || null,
       domiciliarioNombre: orderData.domiciliarioNombre || '',
       domiciliarioTelefono: orderData.domiciliarioTelefono || '',
-      createdAt: new Date().toISOString()
+      createdAt: orderData.createdAt || new Date().toISOString()
     };
 
-    tenant.orders.unshift(newOrder);
+    if (existingIndex !== -1) {
+      tenant.orders[existingIndex] = {
+        ...tenant.orders[existingIndex],
+        ...orderToSave
+      };
+    } else {
+      tenant.orders.unshift(orderToSave);
+    }
 
     if (orderData.tipo === 'dine_in' && orderData.mesaNumero) {
       this.occupyTable(tenant.id, orderData.mesaNumero, orderData.items);
     }
 
     this.persist();
-    return newOrder;
+    return existingIndex !== -1 ? tenant.orders[existingIndex] : orderToSave;
   }
 
   updateOrder(tenantId, orderId, updateData) {

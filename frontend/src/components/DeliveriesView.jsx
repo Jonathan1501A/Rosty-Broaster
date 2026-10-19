@@ -29,8 +29,11 @@ export default function DeliveriesView({
   onEditOrder,
   onCancelOrder
 }) {
+  // Deduplicar órdenes por ID de forma defensiva
+  const uniqueOrders = Array.from(new Map(orders.map((o) => [o.id, o])).values());
+
   // Solo pedidos de tipo Domicilio
-  const deliveryOrders = orders.filter((o) => o.tipo === 'delivery');
+  const deliveryOrders = uniqueOrders.filter((o) => o.tipo === 'delivery');
 
   // Filtros: 'pendientes' (sin cobrar), 'todos', 'cobrados'
   const [filter, setFilter] = useState('pendientes');

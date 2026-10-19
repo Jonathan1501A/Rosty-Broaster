@@ -26,8 +26,13 @@ export default function KitchenView({
 }) {
   const [filterTipo, setFilterTipo] = useState('todos');
 
+  // Deduplicar órdenes por ID de forma defensiva para garantizar que nunca se rendericen tarjetas duplicadas
+  const uniqueOrders = Array.from(
+    new Map(orders.map((o) => [o.id, o])).values()
+  );
+
   // Filtrar comandas activas (no despachadas)
-  const activeOrders = orders.filter((o) => (o.estado || '').toLowerCase() !== 'despachado');
+  const activeOrders = uniqueOrders.filter((o) => (o.estado || '').toLowerCase() !== 'despachado');
   const filteredOrders = activeOrders.filter((o) =>
     filterTipo === 'todos' ? true : o.tipo === filterTipo
   );
