@@ -755,7 +755,7 @@
     {
       "id": "u-pizzeria-waiter",
       "empresaId": "pizzeria-napoles",
-      "username": "waiter",
+      "username": "waiter_pizza",
       "pinHash": "$2b$10$h.eTnS62Kx3/1eH2Hf6BW.zFBvD8TH4EoG8gY.ZoKeC3tw.k/OCY6",
       "name": "Mesero Pizzería",
       "role": "waiter"
@@ -763,7 +763,7 @@
     {
       "id": "u-pizzeria-chef",
       "empresaId": "pizzeria-napoles",
-      "username": "chef",
+      "username": "chef_pizza",
       "pinHash": "$2b$10$c5rri1fR6QdnSkBamqh4n.lMnQIioo50zIjDTHx16e1CfOPrPN9Ya",
       "name": "Maestro Pizzero (KDS)",
       "role": "chef"
@@ -771,7 +771,7 @@
     {
       "id": "u-pizzeria-admin",
       "empresaId": "pizzeria-napoles",
-      "username": "admin",
+      "username": "admin_pizza",
       "pinHash": "$2b$10$VQ2hQ5g199ZYL2SjxHxuU.dsaRFIf6THN/2XsdfL1vcBaIeprpkDu",
       "name": "Administración Pizzería",
       "role": "admin"

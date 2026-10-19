@@ -60,6 +60,17 @@ export const api = {
     return api.login(username, password, 'global');
   },
 
+  checkUsername: async (username, excludeUserId = null) => {
+    const clean = String(username || '').trim().toLowerCase();
+    if (!clean) return { available: false, reason: 'Ingresa un usuario' };
+    const query = new URLSearchParams({
+      username: clean,
+      ...(excludeUserId ? { excludeUserId } : {})
+    }).toString();
+    const res = await fetch(`${API_URL}/api/auth/check-username?${query}`);
+    return res.json();
+  },
+
   getCurrentUser: () => {
     try {
       const stored = localStorage.getItem('rosty_auth_user');

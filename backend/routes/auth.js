@@ -200,6 +200,43 @@ router.post('/superadmin-login', authLimiter, (req, res) => {
 });
 
 /**
+ * @route GET /api/auth/check-username
+ * @desc Verificar disponibilidad de un nombre de usuario en toda la plataforma
+ */
+router.get('/check-username', (req, res) => {
+  const { username, excludeUserId } = req.query;
+  if (!username || !String(username).trim()) {
+    return res.status(400).json({ error: 'Debes ingresar un nombre de usuario.', available: false });
+  }
+
+  const clean = String(username).trim().toLowerCase();
+
+  if (clean.length < 3) {
+    return res.json({
+      available: false,
+      username: clean,
+      reason: 'El nombre de usuario debe tener al menos 3 caracteres.'
+    });
+  }
+
+  if (!/^[a-z0-9_.-]+$/.test(clean)) {
+    return res.json({
+      available: false,
+      username: clean,
+      reason: 'Solo se permiten letras, números, puntos, guiones y guiones bajos (sin espacios).'
+    });
+  }
+
+  const isTaken = store.isUsernameTaken(clean, excludeUserId ? String(excludeUserId).trim() : null);
+
+  return res.json({
+    available: !isTaken,
+    username: clean,
+    reason: isTaken ? `El usuario "${clean}" ya está en uso. Elige otro nombre único.` : 'Usuario disponible.'
+  });
+});
+
+/**
  * @route GET /api/auth/me
  * @desc Verificar estado de la sesión activa
  */

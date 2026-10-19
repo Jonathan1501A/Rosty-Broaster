@@ -147,12 +147,22 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
       return;
     }
 
+    const cleanUsername = adminModal.username.trim().toLowerCase();
+    if (cleanUsername.length < 3) {
+      alert('El nombre de usuario debe tener al menos 3 caracteres.');
+      return;
+    }
+    if (!/^[a-z0-9_.-]+$/.test(cleanUsername)) {
+      alert('El nombre de usuario solo puede incluir letras, números, puntos, guiones y guiones bajos (sin espacios).');
+      return;
+    }
+
     setAdminModal((prev) => ({ ...prev, isSaving: true }));
 
     try {
       const updatedAdmin = await api.updateTenantAdmin(adminModal.tenant.id, {
         name: adminModal.name.trim(),
-        username: adminModal.username.trim(),
+        username: cleanUsername,
         pin: adminModal.pin.trim() || undefined
       });
 
@@ -964,15 +974,18 @@ export default function SuperAdminView({ onLogout, onSelectTenantToOpen }) {
 
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#ffb74d', display: 'block', marginBottom: '6px' }}>
-                  Nombre de Usuario (Login)
+                  Nombre de Usuario (Login) *
                 </label>
                 <input
                   type="text"
                   required
                   value={adminModal.username}
-                  onChange={(e) => setAdminModal({ ...adminModal, username: e.target.value })}
+                  onChange={(e) => setAdminModal({ ...adminModal, username: e.target.value.toLowerCase().replace(/\s+/g, '') })}
                   style={{ width: '100%', backgroundColor: '#1a0d06', border: '1.5px solid #4a2815', borderRadius: '10px', padding: '10px', color: '#fff', outline: 'none' }}
                 />
+                <span style={{ fontSize: '0.72rem', color: '#ffcc00', marginTop: '4px', display: 'block' }}>
+                  🔒 <strong>Regla del Sistema:</strong> El nombre de usuario debe ser único en toda la plataforma.
+                </span>
               </div>
 
               <div>

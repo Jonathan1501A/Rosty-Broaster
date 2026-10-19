@@ -34,7 +34,42 @@ export default function UserManagementModal({
   const [showPin, setShowPin] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Validación de disponibilidad de usuario único en tiempo real
+  const [usernameStatus, setUsernameStatus] = useState({
+    checking: false,
+    available: null,
+    reason: ''
+  });
+
   const tenantId = tenant?.id || 'rosty-broaster';
+
+  const checkUsernameAvailability = async (candidate) => {
+    const clean = String(candidate || '').trim().toLowerCase();
+    if (!clean) {
+      setUsernameStatus({ checking: false, available: null, reason: '' });
+      return;
+    }
+    if (clean.length < 3) {
+      setUsernameStatus({ checking: false, available: false, reason: 'Mínimo 3 caracteres.' });
+      return;
+    }
+    if (!/^[a-z0-9_.-]+$/.test(clean)) {
+      setUsernameStatus({ checking: false, available: false, reason: 'Solo letras, números, puntos y guiones.' });
+      return;
+    }
+
+    setUsernameStatus({ checking: true, available: null, reason: 'Comprobando...' });
+    try {
+      const res = await api.checkUsername(clean);
+      setUsernameStatus({
+        checking: false,
+        available: res.available,
+        reason: res.reason || (res.available ? 'Usuario disponible' : 'Usuario no disponible')
+      });
+    } catch {
+      setUsernameStatus({ checking: false, available: null, reason: '' });
+    }
+  };
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -60,6 +95,7 @@ export default function UserManagementModal({
       loadUsers();
       setName('');
       setUsername('');
+      setUsernameStatus({ checking: false, available: null, reason: '' });
       setRole('waiter');
       setPin('');
       setError('');
@@ -78,8 +114,21 @@ export default function UserManagementModal({
       setError('Por favor ingresa el nombre de la persona.');
       return;
     }
-    if (!username.trim()) {
+    const cleanUser = username.trim().toLowerCase();
+    if (!cleanUser) {
       setError('Por favor define un usuario para el sistema.');
+      return;
+    }
+    if (cleanUser.length < 3) {
+      setError('El nombre de usuario debe tener mínimo 3 caracteres.');
+      return;
+    }
+    if (!/^[a-z0-9_.-]+$/.test(cleanUser)) {
+      setError('El usuario solo puede incluir letras, números, puntos, guiones y guiones bajos (sin espacios).');
+      return;
+    }
+    if (usernameStatus.available === false) {
+      setError(usernameStatus.reason || 'Este nombre de usuario ya está registrado en el sistema. Elige otro.');
       return;
     }
     if (!pin.trim() || pin.length < 4) {
@@ -91,14 +140,15 @@ export default function UserManagementModal({
     try {
       const created = await api.createTenantUser(tenantId, {
         name: name.trim(),
-        username: username.trim().toLowerCase(),
+        username: cleanUser,
         role,
         pin: pin.trim()
       });
 
-      setSuccessMsg(`¡Usuario "${created.name}" creado con éxito!`);
+      setSuccessMsg(`¡Usuario "${created.name}" (@${created.username}) creado con éxito!`);
       setName('');
       setUsername('');
+      setUsernameStatus({ checking: false, available: null, reason: '' });
       setPin('');
       setRole('waiter');
       loadUsers();
@@ -314,6 +364,19 @@ export default function UserManagementModal({
               <span>Registrar Nuevo Empleado</span>
             </div>
 
+            {/* Banner de Regla de Nombres de Usuario Únicos */}
+            <div style={{
+              backgroundColor: 'rgba(255, 152, 0, 0.12)',
+              border: '1px solid rgba(255, 152, 0, 0.35)',
+              borderRadius: '10px',
+              padding: '10px 12px',
+              fontSize: '0.75rem',
+              color: '#ffcc00',
+              lineHeight: '1.4'
+            }}>
+              🔒 <strong>Regla del Sistema:</strong> No pueden existir dos nombres de usuario iguales en la plataforma. Cada usuario debe ser único para permitir el ingreso directo.
+            </div>
+
             <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* Nombre Completo */}
               <div>
@@ -338,27 +401,49 @@ export default function UserManagementModal({
                 />
               </div>
 
-              {/* Usuario de Acceso */}
+              {/* Usuario de Acceso Único */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#fbeee0', marginBottom: '6px' }}>
-                  Usuario (Login) *
+                  Nombre de Usuario (Único) *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej: carlos"
+                  placeholder="Ej: carlos_rosty, mesero_1..."
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value.toLowerCase().replace(/\s+/g, '');
+                    setUsername(val);
+                    checkUsernameAvailability(val);
+                  }}
+                  onBlur={() => checkUsernameAvailability(username)}
                   style={{
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '10px',
                     backgroundColor: '#2b180d',
-                    border: '1.5px solid #5c351e',
+                    border: `1.5px solid ${
+                      usernameStatus.available === true 
+                        ? '#4caf50' 
+                        : usernameStatus.available === false 
+                        ? '#f44336' 
+                        : '#5c351e'
+                    }`,
                     color: '#fff',
                     fontSize: '0.9rem'
                   }}
                 />
+                <div style={{ marginTop: '5px', minHeight: '18px' }}>
+                  {usernameStatus.checking && (
+                    <span style={{ color: '#ffb74d', fontSize: '0.75rem' }}>⏳ Verificando disponibilidad...</span>
+                  )}
+                  {!usernameStatus.checking && usernameStatus.available === true && (
+                    <span style={{ color: '#81c784', fontSize: '0.75rem', fontWeight: 'bold' }}>✓ Nombre de usuario único y disponible</span>
+                  )}
+                  {!usernameStatus.checking && usernameStatus.available === false && (
+                    <span style={{ color: '#ff8a80', fontSize: '0.75rem', fontWeight: 'bold' }}>❌ {usernameStatus.reason}</span>
+                  )}
+                </div>
               </div>
 
               {/* Rol Asignado */}

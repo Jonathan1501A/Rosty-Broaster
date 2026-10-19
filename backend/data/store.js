@@ -107,7 +107,7 @@ const INITIAL_PIZZERIA_USERS = [
   {
     id: 'u-pizzeria-waiter',
     empresaId: 'pizzeria-napoles',
-    username: 'waiter',
+    username: 'waiter_pizza',
     pinHash: bcrypt.hashSync('pizza123', 10),
     name: 'Mesero Pizzería',
     role: 'waiter'
@@ -115,7 +115,7 @@ const INITIAL_PIZZERIA_USERS = [
   {
     id: 'u-pizzeria-chef',
     empresaId: 'pizzeria-napoles',
-    username: 'chef',
+    username: 'chef_pizza',
     pinHash: bcrypt.hashSync('cocina123', 10),
     name: 'Maestro Pizzero (KDS)',
     role: 'chef'
@@ -123,7 +123,7 @@ const INITIAL_PIZZERIA_USERS = [
   {
     id: 'u-pizzeria-admin',
     empresaId: 'pizzeria-napoles',
-    username: 'admin',
+    username: 'admin_pizza',
     pinHash: bcrypt.hashSync('admin123', 10),
     name: 'Administración Pizzería',
     role: 'admin'
@@ -158,7 +158,8 @@ class Store {
           this.tenants = parsed.tenants;
           this.users = parsed.users || [];
           this.ensureSuperadmin();
-          console.log(`💾 Base de datos cargada de disco: ${this.tenants.length} restaurantes.`);
+          this.ensureUniqueUsernames();
+          console.log(`💾 Base de datos cargada de disco: ${this.tenants.length} restaurantes y ${this.users.length} usuarios únicos.`);
           return;
         }
       } catch (err) {
@@ -188,6 +189,7 @@ class Store {
 
     this.users = [...INITIAL_ROSTY_USERS, ...INITIAL_PIZZERIA_USERS];
     this.ensureSuperadmin();
+    this.ensureUniqueUsernames();
     this.persist();
   }
 
@@ -204,6 +206,59 @@ class Store {
       });
       this.persist();
     }
+  }
+
+  /**
+   * Garantiza que ningún usuario tenga el mismo username en toda la plataforma.
+   * Si existen duplicados históricos, los renombra automáticamente.
+   */
+  ensureUniqueUsernames() {
+    const seen = new Map();
+    let modified = false;
+
+    for (const user of this.users) {
+      if (!user.username) continue;
+      const lower = String(user.username).trim().toLowerCase();
+      if (!seen.has(lower)) {
+        seen.set(lower, user.id);
+        user.username = lower;
+      } else {
+        // Encontrado usuario duplicado: resolver conflicto con sufijo de empresa
+        const suffix = user.empresaId ? user.empresaId.replace(/[^a-z0-9]/g, '').slice(0, 8) : Date.now().toString().slice(-4);
+        let candidate = `${lower}_${suffix}`;
+        let counter = 1;
+        while (seen.has(candidate) || this.users.some(u => u.id !== user.id && u.username && u.username.toLowerCase() === candidate)) {
+          candidate = `${lower}_${suffix}${counter}`;
+          counter++;
+        }
+        console.warn(`⚠️ Conflicto resuelto: el usuario duplicado [@${user.username}] de la empresa [${user.empresaId}] ahora es [@${candidate}]`);
+        user.username = candidate;
+        seen.set(candidate, user.id);
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      this.persist();
+    }
+  }
+
+  /**
+   * Verifica si un nombre de usuario ya está registrado en el sistema.
+   * Opcionalmente excluye un userId (por ejemplo, al actualizar los datos de ese mismo usuario).
+   */
+  isUsernameTaken(username, excludeUserId = null) {
+    if (!username) return false;
+    const clean = String(username).trim().toLowerCase();
+    if (clean === 'superadmin') {
+      const superUser = this.getSuperadmin();
+      return !excludeUserId || (superUser && superUser.id !== excludeUserId);
+    }
+    return this.users.some(u => 
+      u.username && 
+      u.username.trim().toLowerCase() === clean && 
+      (!excludeUserId || u.id !== excludeUserId)
+    );
   }
 
   getSuperadmin() {
@@ -274,21 +329,42 @@ class Store {
     if (!tenant) throw new Error('Restaurante no encontrado.');
 
     let admin = this.users.find(u => u.empresaId === tenantId && u.role === 'admin');
+
+    if (username && username.trim()) {
+      const cleanUsername = username.trim().toLowerCase();
+      if (cleanUsername.length < 3) {
+        throw new Error('El nombre de usuario debe tener al menos 3 caracteres.');
+      }
+      if (!/^[a-z0-9_.-]+$/.test(cleanUsername)) {
+        throw new Error('El nombre de usuario solo puede contener letras, números, puntos, guiones y guiones bajos (sin espacios).');
+      }
+      if (this.isUsernameTaken(cleanUsername, admin ? admin.id : null)) {
+        throw new Error(`El nombre de usuario "${cleanUsername}" ya existe en el sistema. Los nombres de usuario deben ser únicos para permitir el ingreso directo.`);
+      }
+      if (admin) {
+        admin.username = cleanUsername;
+      }
+    }
+
     if (!admin) {
+      const baseAdminUser = (username || `admin_${tenantId}`).trim().toLowerCase();
+      if (this.isUsernameTaken(baseAdminUser)) {
+        throw new Error(`El nombre de usuario "${baseAdminUser}" ya está en uso.`);
+      }
       admin = {
         id: `u-${tenantId}-admin`,
         empresaId: tenantId,
-        username: (username || 'admin').trim().toLowerCase(),
+        username: baseAdminUser,
         name: (name || 'Administrador').trim(),
         role: 'admin',
         pinHash: bcrypt.hashSync(pin || 'admin123', 10)
       };
       this.users.push(admin);
     } else {
-      if (username && username.trim()) admin.username = username.trim().toLowerCase();
       if (name && name.trim()) admin.name = name.trim();
       if (pin && pin.trim()) admin.pinHash = bcrypt.hashSync(pin.trim(), 10);
     }
+
     this.persist();
     return {
       id: admin.id,
@@ -317,7 +393,8 @@ class Store {
     direccion = '',
     whatsappDomiciliario = '',
     adminPin = 'admin123',
-    adminName = 'Administrador'
+    adminName = 'Administrador',
+    adminUsername = ''
   }) {
     const slug = nombre
       .toLowerCase()
@@ -353,31 +430,42 @@ class Store {
 
     this.tenants.push(newTenant);
 
-    // Crear usuario admin para este nuevo restaurante
+    // Generar nombres de usuarios únicos garantizados
+    let baseAdminUser = (adminUsername || `admin_${slug}`).trim().toLowerCase();
+    if (this.isUsernameTaken(baseAdminUser)) {
+      baseAdminUser = `${baseAdminUser}_${Date.now().toString().slice(-4)}`;
+    }
+
     const adminUser = {
       id: `u-${tenantId}-admin`,
       empresaId: tenantId,
-      username: 'admin',
+      username: baseAdminUser,
       pinHash: bcrypt.hashSync(adminPin, 10),
       name: adminName,
       role: 'admin'
     };
 
-    // Crear usuario mesero por defecto
+    let baseWaiterUser = `waiter_${slug}`;
+    if (this.isUsernameTaken(baseWaiterUser)) {
+      baseWaiterUser = `${baseWaiterUser}_${Date.now().toString().slice(-4)}`;
+    }
     const waiterUser = {
       id: `u-${tenantId}-waiter`,
       empresaId: tenantId,
-      username: 'waiter',
+      username: baseWaiterUser,
       pinHash: bcrypt.hashSync('1234', 10),
       name: `Mesero ${nombre}`,
       role: 'waiter'
     };
 
-    // Crear cocinero por defecto
+    let baseChefUser = `chef_${slug}`;
+    if (this.isUsernameTaken(baseChefUser)) {
+      baseChefUser = `${baseChefUser}_${Date.now().toString().slice(-4)}`;
+    }
     const chefUser = {
       id: `u-${tenantId}-chef`,
       empresaId: tenantId,
-      username: 'chef',
+      username: baseChefUser,
       pinHash: bcrypt.hashSync('1234', 10),
       name: `Cocina ${nombre}`,
       role: 'chef'
@@ -468,17 +556,32 @@ class Store {
     const tenant = this.getTenant(tenantId);
     if (!tenant) throw new Error('Empresa no encontrada.');
 
-    const exists = this.users.some(
-      u => u.empresaId === tenantId && u.username.toLowerCase() === username.toLowerCase()
-    );
-    if (exists) {
-      throw new Error(`El usuario "${username}" ya existe en este restaurante.`);
+    if (!name || !name.trim()) {
+      throw new Error('El nombre de la persona es obligatorio.');
+    }
+
+    if (!username || !username.trim()) {
+      throw new Error('El nombre de usuario es obligatorio.');
+    }
+    const cleanUsername = username.trim().toLowerCase();
+
+    if (cleanUsername.length < 3) {
+      throw new Error('El nombre de usuario debe tener al menos 3 caracteres.');
+    }
+
+    if (!/^[a-z0-9_.-]+$/.test(cleanUsername)) {
+      throw new Error('El nombre de usuario solo puede contener letras minúsculas, números, puntos, guiones y guiones bajos (sin espacios).');
+    }
+
+    // REGLA GLOBAL: No pueden existir dos nombres de usuario iguales en toda la plataforma
+    if (this.isUsernameTaken(cleanUsername)) {
+      throw new Error(`El nombre de usuario "${cleanUsername}" ya existe en el sistema. Cada usuario debe tener un nombre de usuario único para permitir el acceso directo.`);
     }
 
     const newUser = {
       id: `u-${tenantId}-${Date.now().toString().slice(-4)}`,
       empresaId: tenantId,
-      username: username.trim().toLowerCase(),
+      username: cleanUsername,
       name: name.trim(),
       role: role || 'waiter',
       pinHash: bcrypt.hashSync(pin || '1234', 10)
