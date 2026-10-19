@@ -348,17 +348,9 @@
           "id": 2,
           "numero": 2,
           "capacidad": 4,
-          "estado": "ocupada",
-          "apertura": "2026-10-10T23:21:51.317Z",
-          "pedidoActual": [
-            {
-              "id": 103,
-              "name": "1 Pollo + Yuca + Arepa",
-              "price": 38000,
-              "cantidad": 8,
-              "completado": false
-            }
-          ]
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
         },
         {
           "id": 3,
@@ -380,17 +372,9 @@
           "id": 5,
           "numero": 5,
           "capacidad": 4,
-          "estado": "ocupada",
-          "apertura": "2026-10-16T22:26:27.829Z",
-          "pedidoActual": [
-            {
-              "id": 102,
-              "name": "1/2 Pollo + Yuca + Arepa",
-              "price": 21000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ]
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
         },
         {
           "id": 6,
@@ -404,16 +388,9 @@
           "id": 7,
           "numero": 7,
           "capacidad": 4,
-          "estado": "ocupada",
+          "estado": "libre",
           "apertura": null,
-          "pedidoActual": [
-            {
-              "id": 405,
-              "name": "Combo 1 Chow Fan (400 gr + 1/4 Pollo)",
-              "price": 25000,
-              "cantidad": 1
-            }
-          ]
+          "pedidoActual": []
         },
         {
           "id": 8,
@@ -427,7 +404,7 @@
           "id": 9,
           "numero": 9,
           "capacidad": 4,
-          "estado": "cuenta",
+          "estado": "libre",
           "apertura": null,
           "pedidoActual": []
         },
@@ -472,118 +449,7 @@
           "pedidoActual": []
         }
       ],
-      "orders": [
-        {
-          "id": "ORD-7828",
-          "empresaId": "rosty-broaster",
-          "tipo": "dine_in",
-          "destino": "Mesa 5",
-          "cliente": "Salón",
-          "datosExtra": "Salón",
-          "items": [
-            {
-              "id": 102,
-              "name": "1/2 Pollo + Yuca + Arepa",
-              "price": 21000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ],
-          "total": 21000,
-          "estado": "En preparación",
-          "createdAt": "2026-10-16T22:26:27.828Z",
-          "minutos": 328,
-          "limite": 15
-        },
-        {
-          "id": "ORD-2718",
-          "empresaId": "rosty-broaster",
-          "tipo": "delivery",
-          "destino": "palo gordo",
-          "cliente": "pepito",
-          "datosExtra": "Tel: 3123346877",
-          "items": [
-            {
-              "id": 101,
-              "name": "1/4 Pollo + Yuca + Arepa",
-              "price": 11000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ],
-          "total": 11000,
-          "estado": "En preparación",
-          "createdAt": "2026-10-16T22:05:02.718Z",
-          "minutos": 411,
-          "limite": 20
-        },
-        {
-          "id": "ORD-1317",
-          "empresaId": "rosty-broaster",
-          "tipo": "dine_in",
-          "destino": "Mesa 2",
-          "cliente": "Salón",
-          "datosExtra": "Salón",
-          "items": [
-            {
-              "id": 103,
-              "name": "1 Pollo + Yuca + Arepa",
-              "price": 38000,
-              "cantidad": 8,
-              "completado": false
-            }
-          ],
-          "total": 304000,
-          "estado": "En preparación",
-          "createdAt": "2026-10-10T23:21:51.317Z",
-          "minutos": 963,
-          "limite": 15
-        },
-        {
-          "id": "ORD-202",
-          "empresaId": "rosty-broaster",
-          "tipo": "delivery",
-          "destino": "Calle 5 #10-20",
-          "cliente": "Diego Arévalo",
-          "datosExtra": "Tel: 3227801140",
-          "items": [
-            {
-              "id": 405,
-              "name": "Combo 1 Chow Fan (400 gr + 1/4 Pollo)",
-              "price": 25000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ],
-          "total": 25000,
-          "estado": "Listo",
-          "createdAt": "2026-10-10T23:01:12.244Z",
-          "minutos": 17,
-          "limite": 20
-        },
-        {
-          "id": "ORD-203",
-          "empresaId": "rosty-broaster",
-          "tipo": "takeout",
-          "destino": "Recoge en Barra",
-          "cliente": "Luz Marina",
-          "datosExtra": "Para llevar",
-          "items": [
-            {
-              "id": 103,
-              "name": "1 Pollo + Yuca + Arepa",
-              "price": 38000,
-              "cantidad": 1,
-              "completado": true
-            }
-          ],
-          "total": 38000,
-          "estado": "Listo",
-          "createdAt": "2026-10-10T23:15:12.244Z",
-          "minutos": 3,
-          "limite": 15
-        }
-      ],
+      "orders": [],
       "salesHistory": [],
       "closures": [
         {
@@ -643,6 +509,18 @@
               "timestamp": "2026-10-10T21:53:12.244Z"
             }
           ]
+        }
+      ],
+      "domiciliarios": [
+        {
+          "id": "dom-1",
+          "nombre": "Domiciliario 1",
+          "telefono": "3118303263"
+        },
+        {
+          "id": "dom-2",
+          "nombre": "Domiciliario 2",
+          "telefono": ""
         }
       ]
     },
@@ -754,54 +632,25 @@
           "id": 1,
           "numero": 1,
           "capacidad": 4,
-          "estado": "ocupada",
-          "apertura": "2026-10-10T23:33:38.333Z",
-          "pedidoActual": [
-            {
-              "id": 801,
-              "name": "Pizza Margarita Personal",
-              "price": 16000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ]
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
         },
         {
           "id": 2,
           "numero": 2,
           "capacidad": 4,
-          "estado": "ocupada",
-          "apertura": "2026-10-10T23:03:12.244Z",
-          "pedidoActual": [
-            {
-              "id": 802,
-              "name": "Pizza Pepperoni Mediana",
-              "price": 28000,
-              "cantidad": 1
-            },
-            {
-              "id": 831,
-              "name": "Gaseosa 1.5L Familiar",
-              "price": 7000,
-              "cantidad": 1
-            }
-          ]
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
         },
         {
           "id": 3,
           "numero": 3,
           "capacidad": 4,
-          "estado": "ocupada",
-          "apertura": "2026-10-10T23:42:28.041Z",
-          "pedidoActual": [
-            {
-              "id": 803,
-              "name": "Pizza Hawaiana Familiar",
-              "price": 38000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ]
+          "estado": "libre",
+          "apertura": null,
+          "pedidoActual": []
         },
         {
           "id": 4,
@@ -860,119 +709,22 @@
           "pedidoActual": []
         }
       ],
-      "orders": [
-        {
-          "id": "ORD-8041",
-          "empresaId": "pizzeria-napoles",
-          "tipo": "dine_in",
-          "destino": "Mesa 3",
-          "cliente": "Salón",
-          "datosExtra": "Salón",
-          "items": [
-            {
-              "id": 803,
-              "name": "Pizza Hawaiana Familiar",
-              "price": 38000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ],
-          "total": 38000,
-          "estado": "En preparación",
-          "createdAt": "2026-10-10T23:42:28.041Z",
-          "minutos": 883,
-          "limite": 15
-        },
-        {
-          "id": "ORD-8332",
-          "empresaId": "pizzeria-napoles",
-          "tipo": "dine_in",
-          "destino": "Mesa 1",
-          "cliente": "Salón",
-          "datosExtra": "",
-          "items": [
-            {
-              "id": 801,
-              "name": "Pizza Margarita Personal",
-              "price": 16000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ],
-          "total": 16000,
-          "estado": "En preparación",
-          "createdAt": "2026-10-10T23:33:38.332Z",
-          "minutos": 916,
-          "limite": 15
-        },
-        {
-          "id": "PIZ-101",
-          "empresaId": "pizzeria-napoles",
-          "tipo": "dine_in",
-          "destino": "Mesa 2",
-          "cliente": "Salón",
-          "datosExtra": "Mesa 2",
-          "items": [
-            {
-              "id": 802,
-              "name": "Pizza Pepperoni Mediana",
-              "price": 28000,
-              "cantidad": 1,
-              "completado": true
-            },
-            {
-              "id": 831,
-              "name": "Gaseosa 1.5L Familiar",
-              "price": 7000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ],
-          "total": 35000,
-          "estado": "En preparación",
-          "createdAt": "2026-10-10T23:10:12.244Z",
-          "minutos": 976,
-          "limite": 20
-        },
-        {
-          "id": "PIZ-102",
-          "empresaId": "pizzeria-napoles",
-          "tipo": "delivery",
-          "destino": "Av. Circunvalar #45-12",
-          "cliente": "Andrea Torres",
-          "datosExtra": "Tel: 3105559876",
-          "items": [
-            {
-              "id": 810,
-              "name": "Pizza Carnes de la Casa (Familiar)",
-              "price": 46000,
-              "cantidad": 1,
-              "completado": false
-            }
-          ],
-          "total": 46000,
-          "estado": "En preparación",
-          "createdAt": "2026-10-10T23:06:12.244Z",
-          "minutos": 980,
-          "limite": 25
-        }
-      ],
-      "salesHistory": [
-        {
-          "id": "REC-P01",
-          "ordenId": "MESA-5",
-          "destino": "Mesa 5",
-          "cliente": "Salón",
-          "total": 42000,
-          "metodoPago": "tarjeta",
-          "montoRecibido": 42000,
-          "cambio": 0,
-          "despachadoPor": "waiter",
-          "timestamp": "2026-10-10T22:18:12.244Z"
-        }
-      ],
+      "orders": [],
+      "salesHistory": [],
       "closures": [],
-      "estado": "activo"
+      "estado": "activo",
+      "domiciliarios": [
+        {
+          "id": "dom-1",
+          "nombre": "Domiciliario 1",
+          "telefono": "3109876543"
+        },
+        {
+          "id": "dom-2",
+          "nombre": "Domiciliario 2",
+          "telefono": ""
+        }
+      ]
     }
   ],
   "users": [
@@ -996,7 +748,7 @@
       "id": "u-rosty-admin",
       "empresaId": "rosty-broaster",
       "username": "admin",
-      "pinHash": "$2b$10$Mpe28unkzSI0l2BPxI0EV./xdbdDgflns87Uop/y5TG1HYXynPabC",
+      "pinHash": "$2b$10$OvGJEXYHlgKwYDDWnYEjPu1HUDz6qcsJ0iVhvJTZ2OzLz6h20OpNi",
       "name": "Administración & Auditoría",
       "role": "admin"
     },
@@ -1046,7 +798,7 @@
       "username": "jonathan",
       "name": "Jonathan Arevalo",
       "role": "waiter",
-      "pinHash": "$2b$10$5R37YGIoRV92o2mhr7ExEOPcPNmQofqtCDFfBowytYtWw.geU9pVW"
+      "pinHash": "$2b$10$9cVnBMTl/dbyyBRu9Tj3ReVHyKGc2ZtCKZQTCAly9Siq.YeMSxzhe"
     },
     {
       "id": "u-rosty-broaster-0723",
@@ -1054,7 +806,7 @@
       "username": "fabian",
       "name": "Fabian Arevalo",
       "role": "admin",
-      "pinHash": "$2b$10$lVkdaGf.aNBTr.7VFjpWkubA0tuY2szc7PqqRIwhNIhKh1pLZyVtK"
+      "pinHash": "$2b$10$W/vK4Rrq2OaovUosDmyl7.yb9NKkFvi.M59KFnBWmrjRv//N.Njy6"
     },
     {
       "id": "u-rosty-broaster-8335",

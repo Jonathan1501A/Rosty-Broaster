@@ -24,16 +24,19 @@ const getHeaders = (overrideTenantId) => {
 
 export const api = {
   // Autenticación Multi-Tenant y Superadmin
-  login: async (identifier, pin, empresaId = 'rosty-broaster') => {
+  login: async (identifier, pin, empresaId = null) => {
+    const body = { 
+      username: identifier, 
+      role: identifier, 
+      pin 
+    };
+    if (empresaId) {
+      body.empresaId = empresaId;
+    }
     const res = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        username: identifier, 
-        role: identifier, 
-        pin, 
-        empresaId 
-      })
+      body: JSON.stringify(body)
     });
     const data = await res.json();
     if (!res.ok) {
@@ -42,11 +45,12 @@ export const api = {
     if (data.token) {
       localStorage.setItem('rosty_auth_token', data.token);
       localStorage.setItem('rosty_auth_user', JSON.stringify(data.user));
-      if (empresaId && empresaId !== 'global') {
-        localStorage.setItem('rosty_active_tenant_id', empresaId);
-        if (data.empresa) {
-          localStorage.setItem(`rosty_tenant_${empresaId}`, JSON.stringify(data.empresa));
-        }
+      const targetEmpresaId = data.empresa?.id || empresaId;
+      if (targetEmpresaId && targetEmpresaId !== 'global') {
+        localStorage.setItem('rosty_active_tenant_id', targetEmpresaId);
+      }
+      if (data.empresa) {
+        localStorage.setItem(`rosty_tenant_${data.empresa.id}`, JSON.stringify(data.empresa));
       }
     }
     return data;
@@ -249,6 +253,29 @@ export const api = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al crear la comanda');
     return data.order;
+  },
+
+  updateOrder: async (orderId, updateData, tenantId) => {
+    const targetTenant = tenantId || getActiveTenantId();
+    const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
+      method: 'PUT',
+      headers: getHeaders(targetTenant),
+      body: JSON.stringify(updateData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al actualizar comanda');
+    return data.order;
+  },
+
+  cancelOrder: async (orderId, tenantId) => {
+    const targetTenant = tenantId || getActiveTenantId();
+    const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
+      method: 'DELETE',
+      headers: getHeaders(targetTenant)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al cancelar comanda');
+    return data;
   },
 
   updateOrderStatus: async (orderId, estado, tenantId) => {

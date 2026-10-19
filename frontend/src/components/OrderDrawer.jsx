@@ -21,7 +21,10 @@ export default function OrderDrawer({
   mesaNumero, 
   initialItems = [], 
   onSendOrder,
-  menu
+  onUpdateExistingOrder,
+  editingOrderId = null,
+  menu,
+  tenant
 }) {
   const currentMenu = menu && Object.keys(menu).length > 0 ? menu : MENU_CATEGORIES;
   const categoriesList = Object.keys(currentMenu);
@@ -33,6 +36,8 @@ export default function OrderDrawer({
     phone: '',
     address: ''
   });
+  const domiciliarios = tenant?.domiciliarios || [];
+  const [selectedDomiciliarioId, setSelectedDomiciliarioId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
 
@@ -50,6 +55,7 @@ export default function OrderDrawer({
       // Solo inicializar exactamente cuando el drawer se abre de cerrado a abierto
       setCart(initialItems && initialItems.length > 0 ? JSON.parse(JSON.stringify(initialItems)) : []);
       setCustomerData({ name: '', phone: '', address: '' });
+      setSelectedDomiciliarioId(domiciliarios[0]?.id || '');
       setValidationError('');
       setSearchQuery('');
       setIsSubmitting(false);
@@ -95,7 +101,7 @@ export default function OrderDrawer({
     return cart.reduce((sum, item) => sum + item.price * item.cantidad, 0);
   };
 
-  // Envío a cocina
+  // Envío o actualización de comanda
   const handleSubmitOrder = async () => {
     setValidationError('');
 
@@ -109,25 +115,39 @@ export default function OrderDrawer({
     const finalPhone = customerData.phone.trim() || '3000000000';
     const finalAddress = customerData.address.trim() || (servicioTipo === 'delivery' ? 'Dirección de Entrega' : '');
 
-    if (servicioTipo === 'delivery' && !customerData.address.trim()) {
+    if (servicioTipo === 'delivery' && !customerData.address.trim() && !editingOrderId) {
       setValidationError('Por favor ingrese la dirección de entrega del domicilio.');
       return;
     }
 
+    const chosenDriver = domiciliarios.find((d) => d.id === selectedDomiciliarioId);
+    const domiciliarioId = chosenDriver ? chosenDriver.id : null;
+    const domiciliarioNombre = chosenDriver ? chosenDriver.nombre : null;
+    const domiciliarioTelefono = chosenDriver ? chosenDriver.telefono : null;
+
+    const payload = {
+      tipo: servicioTipo,
+      mesaNumero: servicioTipo === 'dine_in' ? Number(mesaNumero || 1) : null,
+      destino: servicioTipo === 'dine_in' ? `Mesa ${mesaNumero || 1}` : servicioTipo === 'delivery' ? finalAddress : 'Retiro en Barra',
+      cliente: finalCustomerName,
+      datosExtra: servicioTipo === 'delivery' ? `Tel: ${finalPhone}` : servicioTipo === 'takeout' ? 'Para llevar' : 'Salón',
+      items: cart,
+      total: calculateTotal(),
+      domiciliarioId,
+      domiciliarioNombre,
+      domiciliarioTelefono
+    };
+
     setIsSubmitting(true);
     try {
-      await onSendOrder({
-        tipo: servicioTipo,
-        mesaNumero: servicioTipo === 'dine_in' ? Number(mesaNumero || 1) : null,
-        destino: servicioTipo === 'dine_in' ? `Mesa ${mesaNumero || 1}` : servicioTipo === 'delivery' ? finalAddress : 'Retiro en Barra',
-        cliente: finalCustomerName,
-        datosExtra: servicioTipo === 'delivery' ? `Tel: ${finalPhone}` : servicioTipo === 'takeout' ? 'Para llevar' : 'Salón',
-        items: cart,
-        total: calculateTotal()
-      });
+      if (editingOrderId && onUpdateExistingOrder) {
+        await onUpdateExistingOrder(editingOrderId, payload);
+      } else {
+        await onSendOrder(payload);
+      }
       onClose();
     } catch (err) {
-      setValidationError(err.message || 'Error al enviar la comanda a la cocina');
+      setValidationError(err.message || 'Error al procesar la comanda');
     } finally {
       setIsSubmitting(false);
     }
@@ -196,14 +216,16 @@ export default function OrderDrawer({
             </div>
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '900', color: '#ffcc00', margin: 0 }}>
-                {servicioTipo === 'dine_in'
+                {editingOrderId 
+                  ? `✏️ Modificar Comanda #${editingOrderId}`
+                  : servicioTipo === 'dine_in'
                   ? `Comanda Mesa #${mesaNumero}`
                   : servicioTipo === 'delivery'
                   ? 'Nuevo Pedido Domicilio'
                   : 'Pedido Para Llevar'}
               </h2>
               <p style={{ fontSize: '0.8rem', color: '#fbeee0', margin: 0 }}>
-                Selecciona los platos y bebidas del catálogo
+                {editingOrderId ? 'Agrega o retira platos de la comanda activa' : 'Selecciona los platos y bebidas del catálogo'}
               </p>
             </div>
           </div>
@@ -230,9 +252,11 @@ export default function OrderDrawer({
               <Send size={16} />
               <span>
                 {isSubmitting
-                  ? 'Enviando...'
+                  ? 'Guardando...'
                   : cart.length === 0
                   ? 'Comanda Vacía'
+                  : editingOrderId
+                  ? `💾 GUARDAR CAMBIOS (${formatCurrency(calculateTotal())})`
                   : `🔥 ENVIAR A COCINA (${formatCurrency(calculateTotal())})`}
               </span>
             </button>
@@ -462,6 +486,36 @@ export default function OrderDrawer({
                   🛵 Datos del Domicilio & Cliente
                 </span>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {domiciliarios.length > 0 && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: '#ffcc00', marginBottom: '4px', fontWeight: '700' }}>
+                        🛵 Asignar Domiciliario:
+                      </label>
+                      <select
+                        value={selectedDomiciliarioId}
+                        onChange={(e) => setSelectedDomiciliarioId(e.target.value)}
+                        style={{
+                          width: '100%',
+                          backgroundColor: '#1f1109',
+                          border: '1.5px solid #5c351e',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          color: '#ffcc00',
+                          fontSize: '0.85rem',
+                          fontWeight: '800',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="">-- Sin asignar (Cualquiera disponible) --</option>
+                        {domiciliarios.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.nombre} ({d.telefono || 'Sin WhatsApp'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <input
                     type="text"
                     placeholder="Nombre completo del cliente"
@@ -669,9 +723,13 @@ export default function OrderDrawer({
                 }}
               >
                 {isSubmitting ? (
-                  <span>Transmitiendo a cocina...</span>
+                  <span>Procesando comanda...</span>
                 ) : cart.length === 0 ? (
                   <span>🛒 Selecciona platos para enviar</span>
+                ) : editingOrderId ? (
+                  <>
+                    <Send size={18} /> 💾 GUARDAR CAMBIOS EN COMANDA ({formatCurrency(calculateTotal())})
+                  </>
                 ) : (
                   <>
                     <Send size={18} /> 🔥 ENVIAR A COCINA ({formatCurrency(calculateTotal())})

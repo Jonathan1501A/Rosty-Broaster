@@ -8,7 +8,8 @@ import {
   Plus, 
   Receipt, 
   DollarSign, 
-  Utensils 
+  Utensils,
+  Trash2
 } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
 
@@ -17,7 +18,8 @@ export default function TablesView({
   onOpenTableOrder, 
   onStartDelivery, 
   onStartTakeout, 
-  onOpenCheckout 
+  onOpenCheckout,
+  onCancelTableOrder
 }) {
   const [filter, setFilter] = useState('todas'); // 'todas' | 'libres' | 'ocupadas' | 'cuenta'
 
@@ -335,6 +337,31 @@ export default function TablesView({
                     >
                       <Receipt size={16} /> Cobrar
                     </button>
+
+                    {onCancelTableOrder && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`¿Estás seguro de cancelar la comanda de la Mesa ${mesa.numero} y liberarla?`)) {
+                            onCancelTableOrder(mesa.numero);
+                          }
+                        }}
+                        title="Cancelar comanda y liberar mesa"
+                        style={{
+                          backgroundColor: '#491212',
+                          border: '1.5px solid #c62828',
+                          color: '#ff8a80',
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </>
                 )}
               </div>

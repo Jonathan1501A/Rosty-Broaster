@@ -32,7 +32,7 @@ router.get('/', (req, res) => {
  */
 router.post('/', orderLimiter, (req, res) => {
   const tenantId = getTenantId(req);
-  const { tipo, destino, cliente, datosExtra, items, total, mesaNumero } = req.body;
+  const { tipo, destino, cliente, datosExtra, items, total, mesaNumero, domiciliarioId, domiciliarioNombre, domiciliarioTelefono } = req.body;
 
   if (!tipo || !['dine_in', 'delivery', 'takeout'].includes(tipo)) {
     return res.status(400).json({ error: 'Tipo de servicio no válido (dine_in, delivery, takeout).' });
@@ -69,7 +69,10 @@ router.post('/', orderLimiter, (req, res) => {
     datosExtra: datosExtra || '',
     items: cleanItems,
     total: cleanTotal,
-    mesaNumero: tipo === 'dine_in' ? Number(mesaNumero) : null
+    mesaNumero: tipo === 'dine_in' ? Number(mesaNumero) : null,
+    domiciliarioId: domiciliarioId || null,
+    domiciliarioNombre: domiciliarioNombre || '',
+    domiciliarioTelefono: domiciliarioTelefono || ''
   });
 
   const io = req.app.get('io');
@@ -169,6 +172,73 @@ router.post('/settle', (req, res) => {
   res.json({
     message: 'Domicilios liquidados y registrados en caja con éxito.',
     ...result
+  });
+});
+
+/**
+ * @route PUT /api/orders/:id
+ * @desc Modificar o editar una comanda existente en cocina
+ */
+router.put('/:id', (req, res) => {
+  const tenantId = getTenantId(req);
+  const { id } = req.params;
+  const { items, cliente, destino, datosExtra, domiciliarioId, domiciliarioNombre, domiciliarioTelefono } = req.body;
+
+  const updatedOrder = store.updateOrder(tenantId, id, {
+    items,
+    cliente,
+    destino,
+    datosExtra,
+    domiciliarioId,
+    domiciliarioNombre,
+    domiciliarioTelefono
+  });
+
+  if (!updatedOrder) {
+    return res.status(404).json({ error: 'Comanda no encontrada.' });
+  }
+
+  const io = req.app.get('io');
+  if (io) {
+    io.to(tenantId).emit('order:updated', updatedOrder);
+    if (updatedOrder.tipo === 'dine_in' && updatedOrder.mesaNumero) {
+      io.to(tenantId).emit('tables:updated', store.getTables(tenantId));
+    }
+  }
+
+  res.json({
+    message: 'Comanda actualizada con éxito.',
+    order: updatedOrder
+  });
+});
+
+/**
+ * @route DELETE /api/orders/:id
+ * @desc Cancelar / eliminar comanda activa y liberar mesa
+ */
+router.delete('/:id', (req, res) => {
+  const tenantId = getTenantId(req);
+  const { id } = req.params;
+
+  const result = store.cancelOrder(tenantId, id);
+  if (!result) {
+    return res.status(404).json({ error: 'Comanda no encontrada.' });
+  }
+
+  const io = req.app.get('io');
+  if (io) {
+    io.to(tenantId).emit('order:deleted', { orderId: id, mesaNumero: result.tableNumero });
+    io.to(tenantId).emit('orders:updated_list', store.getOrders(tenantId));
+    if (result.tableNumero) {
+      io.to(tenantId).emit('tables:updated', store.getTables(tenantId));
+    }
+    io.to(tenantId).emit('stats:updated', store.getStats(tenantId));
+  }
+
+  res.json({
+    message: `Comanda #${id} cancelada con éxito.`,
+    orderId: id,
+    tableNumero: result.tableNumero
   });
 });
 

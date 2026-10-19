@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { 
   ChefHat, 
-  Clock, 
   Check, 
   Flame, 
   CheckCircle2, 
   Send,
-  MessageSquare 
+  MessageSquare,
+  Edit2,
+  Trash2,
+  Bike,
+  ShoppingBag,
+  UtensilsCrossed,
+  Clock
 } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
 import { openWhatsAppDelivery } from '../services/whatsapp.js';
@@ -15,6 +20,8 @@ export default function KitchenView({
   orders = [], 
   onUpdateStatus, 
   onToggleItem,
+  onEditOrder,
+  onCancelOrder,
   tenant
 }) {
   const [filterTipo, setFilterTipo] = useState('todos');
@@ -36,21 +43,29 @@ export default function KitchenView({
     return est === 'listo';
   });
 
-  const renderOrderCard = (orden) => {
-    const minutos = Number(orden.minutos) || 0;
-    const limite = Number(orden.limite) || (orden.tipo === 'delivery' ? 20 : 15);
-    const isLate = minutos >= limite;
-    const isWarning = minutos >= limite - 4 && !isLate;
+  const formatCreationTime = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch {
+      return '';
+    }
+  };
 
-    const timerColor = isLate ? '#ff5252' : isWarning ? '#ffcc00' : '#81c784';
+  const renderOrderCard = (orden) => {
+    const isReady = (orden.estado || '').toLowerCase() === 'listo';
+    const isDelivery = orden.tipo === 'delivery';
+    const isTakeout = orden.tipo === 'takeout';
+    const isDineIn = orden.tipo === 'dine_in';
+    const mesaNum = isDineIn && orden.destino ? Number(orden.destino.replace(/\D/g, '')) || null : null;
 
     return (
       <div
         key={orden.id}
-        className={`animate-fade-in ${isLate ? 'animate-pulse-danger' : ''}`}
+        className="animate-fade-in"
         style={{
-          backgroundColor: 'var(--bg-surface, #3d2314)',
-          border: `2px solid ${isLate ? '#c62828' : isWarning ? '#ffcc00' : 'var(--brand-primary, #e27329)'}`,
+          backgroundColor: '#3d2314',
+          border: `2px solid ${isReady ? '#2e7d32' : '#e27329'}`,
           borderRadius: '16px',
           padding: '16px',
           display: 'flex',
@@ -60,49 +75,60 @@ export default function KitchenView({
           position: 'relative'
         }}
       >
-        {/* Card Header */}
+        {/* Card Header: Tipo de Servicio Claro & Hora de Ingreso */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '1.25rem', fontWeight: '900', color: '#ffcc00' }}>
                 {orden.destino}
               </span>
               <span
                 style={{
-                  fontSize: '0.72rem',
+                  fontSize: '0.75rem',
                   fontWeight: '800',
                   color: '#fff',
-                  backgroundColor: orden.tipo === 'delivery' ? '#0288d1' : orden.tipo === 'takeout' ? '#7b1fa2' : '#2e7d32',
-                  padding: '3px 8px',
-                  borderRadius: '6px'
+                  backgroundColor: isDelivery ? '#0288d1' : isTakeout ? '#7b1fa2' : '#2e7d32',
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
                 }}
               >
-                {orden.tipo === 'delivery' ? 'Domicilio' : orden.tipo === 'takeout' ? 'Llevar' : 'Salón'}
+                {isDelivery ? <Bike size={14} /> : isTakeout ? <ShoppingBag size={14} /> : <UtensilsCrossed size={14} />}
+                {isDelivery ? 'Domicilio' : isTakeout ? 'Para Llevar' : 'Mesa Salón'}
               </span>
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#fbeee0', marginTop: '2px', fontWeight: '600' }}>
+
+            <div style={{ fontSize: '0.825rem', color: '#fbeee0', marginTop: '4px', fontWeight: '600' }}>
               👤 {orden.cliente} {orden.datosExtra ? `• ${orden.datosExtra}` : ''}
             </div>
+
+            {/* Domiciliario asignado si es delivery */}
+            {isDelivery && (
+              <div style={{ fontSize: '0.78rem', color: '#ffcc00', marginTop: '3px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Bike size={14} /> Repartidor: {orden.domiciliarioNombre || 'Por asignar'}
+              </div>
+            )}
           </div>
 
-          {/* Temporizador */}
+          {/* Hora de Ingreso Fija (Sin temporizador confuso) */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '5px',
               backgroundColor: '#2b180d',
-              border: `1.5px solid ${timerColor}`,
-              color: timerColor,
+              border: '1.5px solid #5c351e',
+              color: '#ffcc00',
               padding: '4px 10px',
-              borderRadius: '20px',
-              fontSize: '0.825rem',
-              fontWeight: '900',
-              fontFamily: 'var(--font-mono)'
+              borderRadius: '12px',
+              fontSize: '0.8rem',
+              fontWeight: '800'
             }}
           >
-            <Clock size={14} />
-            <span>{minutos}/{limite} min</span>
+            <Clock size={13} color="#e27329" />
+            <span>{formatCreationTime(orden.createdAt) || 'Reciente'}</span>
           </div>
         </div>
 
@@ -170,17 +196,71 @@ export default function KitchenView({
           )}
         </div>
 
-        {/* Footer y Botones de Transición de Estado */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', paddingTop: '4px' }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: '900', color: '#ffcc00', fontFamily: 'var(--font-mono)' }}>
-            {formatCurrency(orden.total)}
+        {/* Footer y Acciones de la Comanda */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', paddingTop: '4px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1rem', fontWeight: '900', color: '#ffcc00', fontFamily: 'var(--font-mono)' }}>
+              {formatCurrency(orden.total)}
+            </span>
+
+            {/* Botón Editar Comanda */}
+            {onEditOrder && (
+              <button
+                type="button"
+                onClick={() => onEditOrder(orden)}
+                title="Editar comanda en cocina"
+                style={{
+                  backgroundColor: '#4a2c1a',
+                  border: '1px solid #e27329',
+                  color: '#ffcc00',
+                  borderRadius: '8px',
+                  padding: '6px 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Edit2 size={13} /> Editar
+              </button>
+            )}
+
+            {/* Botón Cancelar Comanda */}
+            {onCancelOrder && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`¿Seguro que deseas cancelar la comanda #${orden.id} (${orden.destino})?`)) {
+                    onCancelOrder(orden.id, mesaNum);
+                  }
+                }}
+                title="Cancelar y eliminar esta comanda"
+                style={{
+                  backgroundColor: '#491212',
+                  border: '1px solid #c62828',
+                  color: '#ff8a80',
+                  borderRadius: '8px',
+                  padding: '6px 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Trash2 size={13} /> Cancelar
+              </button>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            {orden.tipo === 'delivery' && (
+            {isDelivery && (
               <button
                 type="button"
-                onClick={() => openWhatsAppDelivery(orden, tenant?.whatsappDomiciliario, tenant?.nombre)}
+                onClick={() => openWhatsAppDelivery(orden, orden.domiciliarioTelefono || tenant?.whatsappDomiciliario, tenant?.nombre)}
                 title="Enviar comanda formateada al domiciliario por WhatsApp"
                 style={{
                   backgroundColor: '#25D366',
@@ -201,7 +281,7 @@ export default function KitchenView({
               </button>
             )}
 
-            {orden.estado !== 'Listo' ? (
+            {!isReady ? (
               <button
                 type="button"
                 onClick={() => onUpdateStatus(orden.id, 'Listo')}
@@ -212,7 +292,8 @@ export default function KitchenView({
                   borderRadius: '10px',
                   fontSize: '0.85rem',
                   fontWeight: '800',
-                  boxShadow: '0 4px 12px rgba(46, 125, 50, 0.4)'
+                  boxShadow: '0 4px 12px rgba(46, 125, 50, 0.4)',
+                  cursor: 'pointer'
                 }}
               >
                 <CheckCircle2 size={18} /> Marcar Listo
@@ -228,7 +309,8 @@ export default function KitchenView({
                   borderRadius: '10px',
                   fontSize: '0.85rem',
                   fontWeight: '800',
-                  boxShadow: '0 4px 12px rgba(226, 115, 41, 0.4)'
+                  boxShadow: '0 4px 12px rgba(226, 115, 41, 0.4)',
+                  cursor: 'pointer'
                 }}
               >
                 <Send size={16} /> Despachado
@@ -277,7 +359,7 @@ export default function KitchenView({
               Pantalla de Cocina & Despacho (KDS)
             </h1>
             <p style={{ fontSize: '0.8rem', color: '#fbeee0', margin: 0 }}>
-              Control en tiempo real de cocción, tiempos y pedidos listos
+              Control claro por tipo de servicio (Mesa / Llevar / Domicilio) y preparación de pedidos
             </p>
           </div>
         </div>
@@ -302,7 +384,8 @@ export default function KitchenView({
                   fontSize: '0.825rem',
                   backgroundColor: isActive ? '#e27329' : '#2b180d',
                   color: isActive ? '#fff' : '#fbeee0',
-                  border: isActive ? '1.5px solid #ffcc00' : '1px solid #5c351e'
+                  border: isActive ? '1.5px solid #ffcc00' : '1px solid #5c351e',
+                  cursor: 'pointer'
                 }}
               >
                 {f.label}

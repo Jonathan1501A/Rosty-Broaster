@@ -8,7 +8,10 @@ import {
   MapPin, 
   Save, 
   CheckCircle2, 
-  MessageSquare
+  MessageSquare,
+  Bike,
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 export default function CompanySettingsModal({ 
@@ -25,6 +28,18 @@ export default function CompanySettingsModal({
   const [direccion, setDireccion] = useState(tenant?.direccion || '');
   const [whatsappDomiciliario, setWhatsappDomiciliario] = useState(tenant?.whatsappDomiciliario || '');
 
+  // Gestión de Domiciliarios (2-3 repartidores)
+  const [domiciliarios, setDomiciliarios] = useState(
+    tenant?.domiciliarios && tenant.domiciliarios.length > 0
+      ? tenant.domiciliarios
+      : [
+          { id: 'dom-1', nombre: 'Domiciliario 1', telefono: tenant?.whatsappDomiciliario || '3201234567' },
+          { id: 'dom-2', nombre: 'Domiciliario 2', telefono: '3109876543' }
+        ]
+  );
+  const [newDomNombre, setNewDomNombre] = useState('');
+  const [newDomTelefono, setNewDomTelefono] = useState('');
+
   // Colores de la marca
   const [primario, setPrimario] = useState(tenant?.colores?.primario || '#e27329');
   const [secundario, setSecundario] = useState(tenant?.colores?.secundario || '#ffcc00');
@@ -35,6 +50,23 @@ export default function CompanySettingsModal({
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleAddDomiciliario = (e) => {
+    e?.preventDefault();
+    if (!newDomNombre.trim()) return;
+    const newDom = {
+      id: `dom-${Date.now().toString().slice(-4)}`,
+      nombre: newDomNombre.trim(),
+      telefono: newDomTelefono.trim()
+    };
+    setDomiciliarios((prev) => [...prev, newDom]);
+    setNewDomNombre('');
+    setNewDomTelefono('');
+  };
+
+  const handleRemoveDomiciliario = (id) => {
+    setDomiciliarios((prev) => prev.filter((d) => d.id !== id));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,7 +81,8 @@ export default function CompanySettingsModal({
         numeroMesas: Number(numeroMesas) || 10,
         telefono: telefono.trim(),
         direccion: direccion.trim(),
-        whatsappDomiciliario: whatsappDomiciliario.trim(),
+        whatsappDomiciliario: (domiciliarios[0]?.telefono || whatsappDomiciliario || '').trim(),
+        domiciliarios,
         colores: {
           primario,
           secundario,
@@ -333,6 +366,115 @@ export default function CompanySettingsModal({
                   style={{ width: '100%', fontSize: '0.85rem' }}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* 4. Domiciliarios / Repartidores del Restaurante */}
+          <div style={{ backgroundColor: '#341e11', border: '1.5px solid #52301c', borderRadius: '16px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffcc00', fontWeight: '900', fontSize: '0.875rem', textTransform: 'uppercase' }}>
+              <Bike size={18} /> Domiciliarios & Repartidores (2 a 3 asignados)
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#c4a48c', margin: 0 }}>
+              Registra los repartidores del restaurante para asignar pedidos individualmente y enviarles la comanda por WhatsApp.
+            </p>
+
+            {/* Lista actual de domiciliarios */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {domiciliarios.map((dom) => (
+                <div
+                  key={dom.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: '#26140b',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #5c351e'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ backgroundColor: 'rgba(2, 136, 209, 0.2)', color: '#4fc3f7', padding: '6px', borderRadius: '8px' }}>
+                      <Bike size={16} />
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: '800', color: '#ffffff', fontSize: '0.9rem', display: 'block' }}>
+                        {dom.nombre}
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: '#ffcc00' }}>
+                        📱 WhatsApp: {dom.telefono || 'Sin número'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveDomiciliario(dom.id)}
+                    style={{
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: '#c62828',
+                      cursor: 'pointer',
+                      padding: '6px',
+                      borderRadius: '6px'
+                    }}
+                    title="Eliminar domiciliario"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Agregar nuevo domiciliario */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'flex-end', backgroundColor: '#2b180d', padding: '12px', borderRadius: '12px', border: '1px dashed #5c351e' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#fbeee0', marginBottom: '4px', fontWeight: '700' }}>
+                  Nombre del Domiciliario:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Carlos Moto 1"
+                  value={newDomNombre}
+                  onChange={(e) => setNewDomNombre(e.target.value)}
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#fbeee0', marginBottom: '4px', fontWeight: '700' }}>
+                  Celular / WhatsApp:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: 3201234567"
+                  value={newDomTelefono}
+                  onChange={(e) => setNewDomTelefono(e.target.value)}
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddDomiciliario}
+                disabled={!newDomNombre.trim()}
+                style={{
+                  backgroundColor: '#0288d1',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '9px 14px',
+                  fontWeight: '800',
+                  fontSize: '0.825rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: newDomNombre.trim() ? 'pointer' : 'not-allowed',
+                  opacity: newDomNombre.trim() ? 1 : 0.6
+                }}
+              >
+                <Plus size={16} /> Agregar
+              </button>
             </div>
           </div>
 

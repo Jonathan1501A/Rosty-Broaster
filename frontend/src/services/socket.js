@@ -52,6 +52,10 @@ export const initSocket = (tenantId = 'rosty-broaster', callbacks = {}) => {
     socket.on('order:updated', callbacks.onOrderUpdated);
   }
 
+  if (callbacks.onOrderDeleted) {
+    socket.on('order:deleted', callbacks.onOrderDeleted);
+  }
+
   if (callbacks.onTablesUpdated) {
     socket.on('tables:updated', callbacks.onTablesUpdated);
   }

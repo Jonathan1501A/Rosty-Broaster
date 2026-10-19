@@ -20,113 +20,12 @@ import { initSocket, disconnectSocket, joinTenantRoom } from './services/socket.
 import { playNewOrderSound, playReadySound } from './services/sound.js';
 import { DEFAULT_TENANT, DEFAULT_PIZZERIA, applyTenantTheme, getStoredTenant } from './data/tenantConfig.js';
 
-// Órdenes de prueba exclusivas para ROSTY Broaster
-const DEFAULT_ROSTY_ORDERS = [
-  {
-    id: 'ORD-201',
-    empresaId: 'rosty-broaster',
-    tipo: 'dine_in',
-    destino: 'Mesa 3',
-    cliente: 'Salón',
-    datosExtra: 'Puestos: 4',
-    items: [
-      { id: 103, name: '1 Pollo + Yuca + Arepa', price: 38000, cantidad: 1, completado: true },
-      { id: 703, name: 'Gaseosa Familiar 1.5L', price: 7000, cantidad: 1, completado: false }
-    ],
-    total: 45000,
-    estado: 'En preparación',
-    minutos: 10,
-    limite: 15
-  },
-  {
-    id: 'ORD-202',
-    empresaId: 'rosty-broaster',
-    tipo: 'delivery',
-    destino: 'Calle 5 #10-20',
-    cliente: 'Diego Arévalo',
-    datosExtra: 'Tel: 3227801140',
-    items: [
-      { id: 405, name: 'Combo 1 Chow Fan (400 gr + 1/4 Pollo)', price: 25000, cantidad: 1, completado: false }
-    ],
-    total: 25000,
-    estado: 'Listo',
-    minutos: 17,
-    limite: 20
-  }
-];
-
-// Órdenes de prueba exclusivas para Pizzería Nápoles (Sin pollo ni platos ajenos)
-const DEFAULT_PIZZERIA_ORDERS = [
-  {
-    id: 'PIZ-101',
-    empresaId: 'pizzeria-napoles',
-    tipo: 'dine_in',
-    destino: 'Mesa 2',
-    cliente: 'Salón',
-    datosExtra: 'Mesa 2',
-    items: [
-      { id: 802, name: 'Pizza Pepperoni Mediana', price: 28000, cantidad: 1, completado: true },
-      { id: 831, name: 'Gaseosa 1.5L Familiar', price: 7000, cantidad: 1, completado: false }
-    ],
-    total: 35000,
-    estado: 'En preparación',
-    minutos: 8,
-    limite: 20
-  },
-  {
-    id: 'PIZ-102',
-    empresaId: 'pizzeria-napoles',
-    tipo: 'delivery',
-    destino: 'Av. Circunvalar #45-12',
-    cliente: 'Andrea Torres',
-    datosExtra: 'Tel: 3105559876',
-    items: [
-      { id: 810, name: 'Pizza Carnes de la Casa (Familiar)', price: 46000, cantidad: 1, completado: false }
-    ],
-    total: 46000,
-    estado: 'En preparación',
-    minutos: 12,
-    limite: 25
-  }
-];
-
-// Generador de mesas aislado por restaurante
+// Generador de mesas limpio y dinámico (todas libres por defecto)
 const generateTables = (count = 10, existingTables = [], tenantId = '') => {
-  const isRosty = tenantId === 'rosty-broaster';
-  const isPizzeria = tenantId === 'pizzeria-napoles';
-
   return Array.from({ length: count }, (_, i) => {
     const num = i + 1;
     const existing = existingTables.find((t) => t.numero === num);
     if (existing) return existing;
-
-    if (isRosty && num === 3) {
-      return {
-        id: num,
-        numero: num,
-        capacidad: 4,
-        estado: 'ocupada',
-        apertura: new Date(Date.now() - 25 * 60000).toISOString(),
-        pedidoActual: [
-          { id: 103, name: '1 Pollo + Yuca + Arepa', price: 38000, cantidad: 1 },
-          { id: 703, name: 'Gaseosa Familiar 1.5L', price: 7000, cantidad: 1 }
-        ]
-      };
-    }
-
-    if (isPizzeria && num === 2) {
-      return {
-        id: num,
-        numero: num,
-        capacidad: 4,
-        estado: 'ocupada',
-        apertura: new Date(Date.now() - 15 * 60000).toISOString(),
-        pedidoActual: [
-          { id: 802, name: 'Pizza Pepperoni Mediana', price: 28000, cantidad: 1 },
-          { id: 831, name: 'Gaseosa 1.5L Familiar', price: 7000, cantidad: 1 }
-        ]
-      };
-    }
 
     return {
       id: num,
@@ -144,9 +43,6 @@ const getInitialOrders = (tenantId) => {
     const saved = localStorage.getItem(`rosty_orders_${tenantId}`);
     if (saved) return JSON.parse(saved);
   } catch (e) {}
-
-  if (tenantId === 'rosty-broaster') return DEFAULT_ROSTY_ORDERS;
-  if (tenantId === 'pizzeria-napoles') return DEFAULT_PIZZERIA_ORDERS;
   return [];
 };
 
@@ -179,7 +75,8 @@ export default function App() {
     isOpen: false,
     servicioTipo: 'dine_in',
     mesaNumero: null,
-    initialItems: []
+    initialItems: [],
+    editingOrderId: null
   });
 
   const [checkoutModal, setCheckoutModal] = useState({
@@ -240,19 +137,6 @@ export default function App() {
     } catch (e) {}
   }, [orders, currentTenantId]);
 
-  // Temporizador de minutos de órdenes en cocina cada 15 segundos
-  useEffect(() => {
-    const timerInterval = setInterval(() => {
-      setOrders((prev) =>
-        prev.map((o) => {
-          const est = (o.estado || '').toLowerCase();
-          return est !== 'listo' && est !== 'despachado' ? { ...o, minutos: (Number(o.minutos) || 0) + 1 } : o;
-        })
-      );
-    }, 15000);
-    return () => clearInterval(timerInterval);
-  }, []);
-
   // Sincronización en tiempo real entre múltiples pestañas AISLADA por restaurante
   useEffect(() => {
     let channel;
@@ -266,6 +150,17 @@ export default function App() {
           addToast('success', `Comanda #${payload.id} (${payload.destino}) inyectada en cocina.`, '🔥 Nueva Comanda');
         } else if (type === 'UPDATE_ORDER' && payload) {
           setOrders((prev) => prev.map((o) => (o.id === payload.id ? { ...o, ...payload } : o)));
+        } else if (type === 'DELETE_ORDER' && payload) {
+          setOrders((prev) => prev.filter((o) => o.id !== payload.id));
+          if (payload.mesaNumero) {
+            setTables((prev) =>
+              prev.map((t) =>
+                t.numero === payload.mesaNumero
+                  ? { ...t, estado: 'libre', apertura: null, pedidoActual: [] }
+                  : t
+              )
+            );
+          }
         } else if (type === 'UPDATE_TABLES' && payload) {
           setTables(payload);
         }
@@ -343,6 +238,18 @@ export default function App() {
         if (updatedOrder.estado === 'Listo') {
           playReadySound();
           addToast('info', `¡Pedido para ${updatedOrder.destino} está listo para servir!`, '🍽️ Pedido Listo');
+        }
+      },
+      onOrderDeleted: (data) => {
+        setOrders((prev) => prev.filter((o) => o.id !== data.orderId));
+        if (data.mesaNumero) {
+          setTables((prev) =>
+            prev.map((t) =>
+              t.numero === data.mesaNumero
+                ? { ...t, estado: 'libre', apertura: null, pedidoActual: [] }
+                : t
+            )
+          );
         }
       },
       onTablesUpdated: (updatedTables) => {
@@ -448,13 +355,29 @@ export default function App() {
     }
   };
 
-  // Abrir comanda de mesa
+  // Abrir comanda de mesa (detecta comanda activa para editar en lugar de duplicar)
   const handleOpenTableOrder = (numero, pedidoActual) => {
+    const activeOrder = orders.find(
+      (o) => o.tipo === 'dine_in' && o.destino === `Mesa ${numero}` && (o.estado || '').toLowerCase() !== 'despachado'
+    );
     setOrderModal({
       isOpen: true,
       servicioTipo: 'dine_in',
       mesaNumero: numero,
-      initialItems: pedidoActual || []
+      initialItems: activeOrder ? activeOrder.items : (pedidoActual || []),
+      editingOrderId: activeOrder ? activeOrder.id : null
+    });
+  };
+
+  // Abrir edición directa de cualquier comanda existente (Cocina, Domicilios, Salón)
+  const handleEditOrder = (order) => {
+    const mesaNum = order.tipo === 'dine_in' && order.destino ? Number(order.destino.replace(/\D/g, '')) || null : null;
+    setOrderModal({
+      isOpen: true,
+      servicioTipo: order.tipo || 'dine_in',
+      mesaNumero: mesaNum,
+      initialItems: order.items || [],
+      editingOrderId: order.id
     });
   };
 
@@ -464,7 +387,8 @@ export default function App() {
       isOpen: true,
       servicioTipo: 'delivery',
       mesaNumero: null,
-      initialItems: []
+      initialItems: [],
+      editingOrderId: null
     });
   };
 
@@ -474,7 +398,8 @@ export default function App() {
       isOpen: true,
       servicioTipo: 'takeout',
       mesaNumero: null,
-      initialItems: []
+      initialItems: [],
+      editingOrderId: null
     });
   };
 
@@ -487,7 +412,7 @@ export default function App() {
     });
   };
 
-  // Enviar pedido desde OrderDrawer (Bloqueado al restaurante actual)
+  // Enviar pedido NUEVO desde OrderDrawer
   const handleSendOrder = async (orderPayload) => {
     const localId = `ORD-${Date.now().toString().slice(-4)}`;
     const newOrder = {
@@ -500,9 +425,10 @@ export default function App() {
       items: orderPayload.items,
       total: orderPayload.total,
       estado: 'En preparación',
-      minutos: 0,
-      limite: orderPayload.tipo === 'delivery' ? 20 : 15,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      domiciliarioId: orderPayload.domiciliarioId || null,
+      domiciliarioNombre: orderPayload.domiciliarioNombre || null,
+      domiciliarioTelefono: orderPayload.domiciliarioTelefono || null
     };
 
     setOrders((prev) => [newOrder, ...prev.filter((o) => o.id !== newOrder.id)]);
@@ -527,7 +453,7 @@ export default function App() {
       channel.close();
     } catch (e) {}
 
-    // Sincronizar en segundo plano con el backend pasando currentTenantId
+    // Sincronizar en segundo plano con el backend
     try {
       const serverOrder = await api.createOrder(
         { ...orderPayload, empresaId: currentTenantId }, 
@@ -538,6 +464,100 @@ export default function App() {
       }
     } catch (err) {
       console.debug('Comanda persistida localmente:', err.message);
+    }
+  };
+
+  // Actualizar comanda EXISTENTE en lugar de duplicarla
+  const handleUpdateExistingOrder = async (orderId, orderPayload) => {
+    const updatedFields = {
+      tipo: orderPayload.tipo,
+      destino: orderPayload.destino,
+      cliente: orderPayload.cliente,
+      datosExtra: orderPayload.datosExtra,
+      items: orderPayload.items,
+      total: orderPayload.total,
+      domiciliarioId: orderPayload.domiciliarioId || null,
+      domiciliarioNombre: orderPayload.domiciliarioNombre || null,
+      domiciliarioTelefono: orderPayload.domiciliarioTelefono || null
+    };
+
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, ...updatedFields } : o))
+    );
+
+    if (orderPayload.tipo === 'dine_in' && orderPayload.mesaNumero) {
+      setTables((prev) =>
+        prev.map((t) =>
+          t.numero === orderPayload.mesaNumero
+            ? { ...t, pedidoActual: orderPayload.items }
+            : t
+        )
+      );
+    }
+
+    addToast('success', `Comanda #${orderId} actualizada correctamente.`, '✏️ Comanda Modificada');
+
+    try {
+      const channel = new BroadcastChannel(`tenant_sync_${currentTenantId}`);
+      channel.postMessage({ type: 'UPDATE_ORDER', payload: { id: orderId, ...updatedFields } });
+      channel.close();
+    } catch (e) {}
+
+    try {
+      await api.updateOrder(orderId, updatedFields, currentTenantId);
+    } catch (err) {
+      console.debug('Error sincronizando edición de comanda con backend:', err.message);
+    }
+  };
+
+  // Cancelar comanda activa y liberar mesa si corresponde
+  const handleCancelOrder = async (orderId, mesaNumero = null) => {
+    const target = orders.find((o) => o.id === orderId);
+    const mesaNum = mesaNumero || (target?.tipo === 'dine_in' && target?.destino ? Number(target.destino.replace(/\D/g, '')) || null : null);
+
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+
+    if (mesaNum) {
+      setTables((prev) =>
+        prev.map((t) =>
+          t.numero === mesaNum
+            ? { ...t, estado: 'libre', apertura: null, pedidoActual: [] }
+            : t
+        )
+      );
+    }
+
+    addToast('info', `Comanda #${orderId} cancelada y retirada.`, '🗑️ Comanda Cancelada');
+
+    try {
+      const channel = new BroadcastChannel(`tenant_sync_${currentTenantId}`);
+      channel.postMessage({ type: 'DELETE_ORDER', payload: { id: orderId, mesaNumero: mesaNum } });
+      channel.close();
+    } catch (e) {}
+
+    try {
+      await api.cancelOrder(orderId, currentTenantId);
+    } catch (err) {
+      console.debug('Error cancelando comanda en backend:', err.message);
+    }
+  };
+
+  // Cancelar comanda desde una mesa ocupada
+  const handleCancelTableOrder = (numero) => {
+    const tableOrder = orders.find(
+      (o) => o.tipo === 'dine_in' && o.destino === `Mesa ${numero}` && (o.estado || '').toLowerCase() !== 'despachado'
+    );
+    if (tableOrder) {
+      handleCancelOrder(tableOrder.id, numero);
+    } else {
+      setTables((prev) =>
+        prev.map((t) =>
+          t.numero === numero
+            ? { ...t, estado: 'libre', apertura: null, pedidoActual: [] }
+            : t
+        )
+      );
+      addToast('info', `Mesa ${numero} liberada.`, 'Mesa Disponible');
     }
   };
 
@@ -752,6 +772,8 @@ export default function App() {
                 onSettleOrders={handleSettleOrders}
                 onStartDelivery={handleStartDelivery}
                 onUpdateStatus={handleUpdateOrderStatus}
+                onEditOrder={handleEditOrder}
+                onCancelOrder={handleCancelOrder}
               />
             ) : (
               <TablesView
@@ -760,6 +782,7 @@ export default function App() {
                 onStartDelivery={handleStartDelivery}
                 onStartTakeout={handleStartTakeout}
                 onOpenCheckout={handleOpenCheckout}
+                onCancelTableOrder={handleCancelTableOrder}
               />
             )}
           </>
@@ -772,6 +795,8 @@ export default function App() {
             tenant={tenant}
             onUpdateStatus={handleUpdateOrderStatus}
             onToggleItem={handleToggleOrderItem}
+            onEditOrder={handleEditOrder}
+            onCancelOrder={handleCancelOrder}
           />
         )}
 
@@ -792,6 +817,7 @@ export default function App() {
                 onStartDelivery={handleStartDelivery}
                 onStartTakeout={handleStartTakeout}
                 onOpenCheckout={handleOpenCheckout}
+                onCancelTableOrder={handleCancelTableOrder}
               />
             )}
             {activeTab === 'deliveries' && (
@@ -801,6 +827,8 @@ export default function App() {
                 onSettleOrders={handleSettleOrders}
                 onStartDelivery={handleStartDelivery}
                 onUpdateStatus={handleUpdateOrderStatus}
+                onEditOrder={handleEditOrder}
+                onCancelOrder={handleCancelOrder}
               />
             )}
             {activeTab === 'kitchen' && (
@@ -809,6 +837,8 @@ export default function App() {
                 tenant={tenant}
                 onUpdateStatus={handleUpdateOrderStatus}
                 onToggleItem={handleToggleOrderItem}
+                onEditOrder={handleEditOrder}
+                onCancelOrder={handleCancelOrder}
               />
             )}
           </>
@@ -818,12 +848,15 @@ export default function App() {
       {/* Drawer de Toma de Comanda con Menú Exclusivo del Restaurante Activo */}
       <OrderDrawer
         isOpen={orderModal.isOpen}
-        onClose={() => setOrderModal((prev) => ({ ...prev, isOpen: false }))}
+        onClose={() => setOrderModal((prev) => ({ ...prev, isOpen: false, editingOrderId: null }))}
         servicioTipo={orderModal.servicioTipo}
         mesaNumero={orderModal.mesaNumero}
         initialItems={orderModal.initialItems}
         onSendOrder={handleSendOrder}
+        onUpdateExistingOrder={handleUpdateExistingOrder}
+        editingOrderId={orderModal.editingOrderId}
         menu={tenant?.menu}
+        tenant={tenant}
       />
 
       {/* Modal de Cobro y Facturación */}

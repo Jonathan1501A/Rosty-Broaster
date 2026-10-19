@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   ShieldAlert, 
   KeyRound, 
@@ -9,23 +9,16 @@ import {
   ArrowLeft,
   AlertTriangle,
   Building2,
-  UserCheck
+  UtensilsCrossed
 } from 'lucide-react';
 import { api } from '../services/api.js';
-import { DEFAULT_TENANT, DEFAULT_PIZZERIA, applyTenantTheme, resolveTenantFromUrlOrStorage } from '../data/tenantConfig.js';
+import { DEFAULT_TENANT, applyTenantTheme } from '../data/tenantConfig.js';
 
 export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
-  // Modos de vista: 'restaurant_login' | 'enter_tenant_code' | 'superadmin_login'
-  const [viewMode, setViewMode] = useState('restaurant_login');
+  // Modos de vista: 'universal_login' | 'enter_tenant_code' | 'superadmin_login'
+  const [viewMode, setViewMode] = useState('universal_login');
 
-  const [activeTenantId, setActiveTenantId] = useState(() => resolveTenantFromUrlOrStorage());
-  const [tenant, setTenant] = useState(() => {
-    const id = resolveTenantFromUrlOrStorage();
-    if (id === 'pizzeria-napoles') return DEFAULT_PIZZERIA;
-    return DEFAULT_TENANT;
-  });
-
-  // Credenciales de Usuario en Restaurante (Sin valores por defecto ni accesos rápidos)
+  // Credenciales de Usuario
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,44 +34,10 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Cargar datos de la empresa actual desde la API
-  useEffect(() => {
-    const fetchActiveTenant = async () => {
-      if (!activeTenantId) {
-        setViewMode('enter_tenant_code');
-        return;
-      }
-
-      try {
-        const data = await api.getTenant(activeTenantId);
-        if (data) {
-          setTenant(data);
-          applyTenantTheme(data);
-        }
-      } catch (err) {
-        console.warn('Usando configuración local:', err.message);
-        if (activeTenantId === 'pizzeria-napoles') {
-          setTenant(DEFAULT_PIZZERIA);
-          applyTenantTheme(DEFAULT_PIZZERIA);
-        } else {
-          setTenant(DEFAULT_TENANT);
-          applyTenantTheme(DEFAULT_TENANT);
-        }
-      }
-    };
-
-    fetchActiveTenant();
-  }, [activeTenantId]);
-
-  // Manejar Login de Usuario en el Restaurante (Estricto, sin predeterminados)
-  const handleRestaurantLogin = async (e) => {
+  // Manejar Login Universal Inteligente
+  const handleUniversalLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-
-    if (tenant?.estado === 'cerrado') {
-      setErrorMsg(`El restaurante "${tenant.nombre}" se encuentra cerrado temporalmente por la plataforma.`);
-      return;
-    }
 
     if (!username.trim()) {
       setErrorMsg('Por favor ingresa tu nombre de usuario registrado.');
@@ -92,11 +51,19 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
     setIsLoading(true);
 
     try {
-      const data = await api.login(username.trim(), pin.trim(), activeTenantId);
-      applyTenantTheme(data.empresa || tenant);
-      onLoginSuccess(data.user, data.empresa || tenant);
+      // El backend detecta automáticamente la empresa a la que pertenece el usuario
+      const data = await api.login(username.trim(), pin.trim());
+      
+      if (data.empresa) {
+        applyTenantTheme(data.empresa);
+        onLoginSuccess(data.user, data.empresa);
+      } else if (data.user?.role === 'superadmin') {
+        onLoginSuccess(data.user, null);
+      } else {
+        onLoginSuccess(data.user, DEFAULT_TENANT);
+      }
     } catch (err) {
-      setErrorMsg(err.message || 'Credenciales incorrectas para este restaurante.');
+      setErrorMsg(err.message || 'Credenciales incorrectas o establecimiento no disponible.');
     } finally {
       setIsLoading(false);
     }
@@ -138,13 +105,11 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
     try {
       const data = await api.getTenant(clean);
       if (data) {
-        setTenant(data);
-        setActiveTenantId(clean);
-        localStorage.setItem('rosty_active_tenant_id', clean);
         applyTenantTheme(data);
-        setViewMode('restaurant_login');
-        setUsername('');
-        setPin('');
+        localStorage.setItem('rosty_active_tenant_id', clean);
+        localStorage.setItem(`rosty_tenant_${clean}`, JSON.stringify(data));
+        setErrorMsg('');
+        setViewMode('universal_login');
       }
     } catch (err) {
       setErrorMsg('Restaurante no encontrado. Verifica el código con la administración.');
@@ -152,8 +117,6 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
       setIsLoading(false);
     }
   };
-
-  const isClosed = tenant?.estado === 'cerrado';
 
   return (
     <div
@@ -163,7 +126,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(circle at 50% 30%, var(--bg-surface, #3d2314) 0%, var(--bg-app, #1f1109) 100%)',
+        background: 'radial-gradient(circle at 50% 30%, #3d2314 0%, #170d07 100%)',
         padding: '24px',
         position: 'relative',
         overflow: 'hidden'
@@ -173,73 +136,47 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         className="animate-fade-in"
         style={{
           width: '100%',
-          maxWidth: '480px',
-          backgroundColor: 'var(--bg-surface, #3d2314)',
-          border: '3px solid var(--brand-primary, #e27329)',
+          maxWidth: '460px',
+          backgroundColor: '#26140b',
+          border: '2.5px solid #e27329',
           borderRadius: '24px',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(226, 115, 41, 0.3)',
-          padding: '32px 28px',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(226, 115, 41, 0.25)',
+          padding: '36px 30px',
           position: 'relative',
           zIndex: 1
         }}
       >
         {/* ============================================================== */}
-        {/* MODO 1: INICIO DE SESIÓN EN RESTAURANTE (ESTRICTO SIN PREDEFINIDOS) */}
+        {/* MODO 1: LOGIN UNIVERSAL INTELIGENTE (REDIRECCIÓN AUTOMÁTICA)   */}
         {/* ============================================================== */}
-        {viewMode === 'restaurant_login' && (
+        {viewMode === 'universal_login' && (
           <div>
-            {/* Header del Restaurante */}
-            <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+            {/* Header del Portal Universal */}
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
               <div
                 style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '20px',
-                  backgroundColor: 'rgba(255, 204, 0, 0.15)',
-                  border: '2.5px solid var(--brand-primary, #e27329)',
+                  width: '68px',
+                  height: '68px',
+                  borderRadius: '22px',
+                  backgroundColor: 'rgba(255, 152, 0, 0.15)',
+                  border: '2.5px solid #e27329',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '34px',
-                  margin: '0 auto 12px auto',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.4)'
+                  margin: '0 auto 14px auto',
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.45)'
                 }}
               >
-                {tenant?.logoEmoji || '🍽️'}
+                🍽️
               </div>
-              <h1 style={{ fontSize: '1.6rem', fontWeight: '900', color: 'var(--brand-gold, #ffcc00)', margin: '0 0 4px 0', letterSpacing: '-0.5px' }}>
-                {tenant?.nombre || 'Restaurante'}
+              <h1 style={{ fontSize: '1.65rem', fontWeight: '900', color: '#ffcc00', margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>
+                Sistema POS Gastronómico
               </h1>
-              <p style={{ fontSize: '0.825rem', color: '#fbeee0', margin: 0, opacity: 0.9 }}>
-                {tenant?.slogan || 'Control de Salón, Cocina y Pedidos'}
+              <p style={{ fontSize: '0.85rem', color: '#fbeee0', margin: 0, opacity: 0.9 }}>
+                Ingresa con tus datos para acceder a tu restaurante
               </p>
             </div>
-
-            {/* Banner si el restaurante está cerrado */}
-            {isClosed && (
-              <div
-                style={{
-                  backgroundColor: 'rgba(198, 40, 40, 0.35)',
-                  border: '2px solid #ff5252',
-                  borderRadius: '14px',
-                  padding: '14px',
-                  marginBottom: '20px',
-                  color: '#ffcdd2',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '10px'
-                }}
-              >
-                <AlertTriangle size={22} style={{ color: '#ff5252', flexShrink: 0, marginTop: '2px' }} />
-                <div>
-                  <div style={{ fontWeight: '900', color: '#ff5252', marginBottom: '2px' }}>
-                    RESTAURANTE CERRADO
-                  </div>
-                  Este establecimiento ha sido suspendido o cerrado temporalmente por la administración de la plataforma. El ingreso de personal no está disponible.
-                </div>
-              </div>
-            )}
 
             {/* Error Banner */}
             {errorMsg && (
@@ -262,23 +199,22 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
               </div>
             )}
 
-            {/* Formulario de Login Estricto */}
-            <form onSubmit={handleRestaurantLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Formulario de Login Universal */}
+            <form onSubmit={handleUniversalLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Campo Usuario */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '800', color: '#ffcc00', marginBottom: '6px' }}>
-                  Nombre de Usuario
+                  Usuario o Correo
                 </label>
                 <input
                   type="text"
                   required
-                  disabled={isClosed}
-                  placeholder="Ingresa tu usuario registrado..."
+                  placeholder="Tu usuario registrado..."
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   style={{
                     width: '100%',
-                    backgroundColor: '#1f1109',
+                    backgroundColor: '#160b05',
                     border: '1.5px solid #5c351e',
                     borderRadius: '12px',
                     padding: '12px 14px',
@@ -286,27 +222,28 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                     fontSize: '0.95rem',
                     fontWeight: '700',
                     outline: 'none',
-                    opacity: isClosed ? 0.6 : 1
+                    transition: 'border-color 0.2s'
                   }}
+                  onFocus={(e) => e.target.style.borderColor = '#e27329'}
+                  onBlur={(e) => e.target.style.borderColor = '#5c351e'}
                 />
               </div>
 
               {/* Campo Contraseña / PIN */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '800', color: '#ffcc00', marginBottom: '6px' }}>
-                  PIN o Contraseña
+                  Contraseña o PIN
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
-                    disabled={isClosed}
-                    placeholder="Ingresa tu clave..."
+                    placeholder="Tu clave o PIN de acceso..."
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
                     style={{
                       width: '100%',
-                      backgroundColor: '#1f1109',
+                      backgroundColor: '#160b05',
                       border: '1.5px solid #5c351e',
                       borderRadius: '12px',
                       padding: '12px 42px 12px 14px',
@@ -315,8 +252,10 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                       fontWeight: '700',
                       letterSpacing: showPassword ? 'normal' : '2px',
                       outline: 'none',
-                      opacity: isClosed ? 0.6 : 1
+                      transition: 'border-color 0.2s'
                     }}
+                    onFocus={(e) => e.target.style.borderColor = '#e27329'}
+                    onBlur={(e) => e.target.style.borderColor = '#5c351e'}
                   />
                   <button
                     type="button"
@@ -341,41 +280,31 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
               {/* Botón de Envío */}
               <button
                 type="submit"
-                disabled={isLoading || isClosed}
+                disabled={isLoading}
                 style={{
-                  backgroundColor: isClosed ? '#424242' : 'var(--brand-primary, #e27329)',
+                  backgroundColor: '#e27329',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '12px',
                   padding: '14px',
                   fontSize: '1rem',
                   fontWeight: '900',
-                  cursor: isClosed ? 'not-allowed' : 'pointer',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: isClosed ? 'none' : '0 6px 20px rgba(0,0,0,0.5)',
-                  marginTop: '8px'
+                  boxShadow: '0 6px 20px rgba(226, 115, 41, 0.4)',
+                  marginTop: '8px',
+                  transition: 'background-color 0.2s, transform 0.1s'
                 }}
               >
-                {isLoading ? 'Autenticando...' : isClosed ? 'Establecimiento Cerrado' : 'Iniciar Turno'} <ArrowRight size={18} />
+                {isLoading ? 'Conectando...' : 'Ingresar al Establecimiento'} <ArrowRight size={18} />
               </button>
             </form>
 
             {/* Enlaces de Pie de Página */}
             <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'center' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('enter_tenant_code');
-                  setErrorMsg('');
-                }}
-                style={{ background: 'none', border: 'none', color: '#ffb74d', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                ¿Deseas acceder a otro restaurante? Cambiar código
-              </button>
-
               <div style={{ display: 'flex', justifyContent: 'center', gap: '18px', fontSize: '0.75rem', color: '#d7ccc8' }}>
                 <button
                   type="button"
@@ -403,7 +332,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         )}
 
         {/* ============================================================== */}
-        {/* MODO 2: INGRESAR CÓDIGO DE RESTAURANTE */}
+        {/* MODO 2: INGRESAR CÓDIGO DE RESTAURANTE                         */}
         {/* ============================================================== */}
         {viewMode === 'enter_tenant_code' && (
           <div>
@@ -428,7 +357,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                 Acceso al Restaurante
               </h2>
               <p style={{ fontSize: '0.825rem', color: '#d7ccc8', margin: 0 }}>
-                Ingresa el código único proporcionado por la administración de tu negocio
+                Ingresa el código único del establecimiento
               </p>
             </div>
 
@@ -461,7 +390,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                   onChange={(e) => setManualCode(e.target.value)}
                   style={{
                     width: '100%',
-                    backgroundColor: '#1f1109',
+                    backgroundColor: '#160b05',
                     border: '1.5px solid #5c351e',
                     borderRadius: '12px',
                     padding: '12px 14px',
@@ -497,7 +426,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
               <button
                 type="button"
                 onClick={() => {
-                  setViewMode('restaurant_login');
+                  setViewMode('universal_login');
                   setErrorMsg('');
                 }}
                 style={{
@@ -521,7 +450,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
         )}
 
         {/* ============================================================== */}
-        {/* MODO 3: INICIO DE SESIÓN SUPERADMINISTRADOR GLOBAL */}
+        {/* MODO 3: INICIO DE SESIÓN SUPERADMINISTRADOR GLOBAL             */}
         {/* ============================================================== */}
         {viewMode === 'superadmin_login' && (
           <div>
@@ -546,7 +475,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                 Administrador Global
               </h2>
               <p style={{ fontSize: '0.825rem', color: '#d7ccc8', margin: 0 }}>
-                Control maestro para crear, gestionar y cerrar empresas
+                Control maestro para crear, gestionar y supervisar empresas
               </p>
             </div>
 
@@ -579,7 +508,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                   onChange={(e) => setSuperUser(e.target.value)}
                   style={{
                     width: '100%',
-                    backgroundColor: '#1a0d06',
+                    backgroundColor: '#160b05',
                     border: '1.5px solid #ff9800',
                     borderRadius: '12px',
                     padding: '12px 14px',
@@ -604,7 +533,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                     onChange={(e) => setSuperPass(e.target.value)}
                     style={{
                       width: '100%',
-                      backgroundColor: '#1a0d06',
+                      backgroundColor: '#160b05',
                       border: '1.5px solid #ff9800',
                       borderRadius: '12px',
                       padding: '12px 42px 12px 14px',
@@ -658,7 +587,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
               <button
                 type="button"
                 onClick={() => {
-                  setViewMode('restaurant_login');
+                  setViewMode('universal_login');
                   setErrorMsg('');
                 }}
                 style={{
@@ -674,7 +603,7 @@ export default function LoginModal({ onLoginSuccess, onOpenPrivacy }) {
                   gap: '6px'
                 }}
               >
-                <ArrowLeft size={14} /> Volver al Punto de Venta
+                <ArrowLeft size={14} /> Volver al Inicio
               </button>
             </form>
           </div>

@@ -16,10 +16,12 @@ export const buildWhatsAppDeliveryLink = (order, driverPhone = '', restaurantNam
     .map((item) => `• *${item.cantidad}x* ${item.name} (${formatCurrency(item.price * item.cantidad)})`)
     .join('\n');
 
+  const driverLine = order.domiciliarioNombre ? `🏍️ *Domiciliario:* ${order.domiciliarioNombre}\n` : '';
+
   const messageText = `🛵 *PEDIDO PARA DOMICILIO - ${restaurantName.toUpperCase()}*
 
 📋 *Comanda:* #${order.id}
-👤 *Cliente:* ${order.cliente || 'Cliente'}
+${driverLine}👤 *Cliente:* ${order.cliente || 'Cliente'}
 📍 *Dirección de Entrega:* ${order.destino || 'Sin dirección'}
 📞 *Contacto Cliente:* ${order.datosExtra ? order.datosExtra.replace('Tel: ', '') : 'No especificado'}
 
@@ -27,7 +29,6 @@ export const buildWhatsAppDeliveryLink = (order, driverPhone = '', restaurantNam
 ${itemsList}
 
 💰 *TOTAL A COBRAR:* ${formatCurrency(order.total)}
-⏱️ *Tiempo Límite:* ${order.limite || 20} minutos
 
 _Por favor confirmar recibido y salida hacia la entrega._`;
 

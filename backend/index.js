@@ -120,16 +120,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Temporizador automático de órdenes en cocina aislado por restaurante (cada 15 segundos)
-setInterval(() => {
-  const huboCambio = store.tickOrderTimers();
-  if (huboCambio) {
-    for (const tenant of store.tenants) {
-      io.to(tenant.id).emit('orders:timer_tick', store.getOrders(tenant.id));
-    }
-  }
-}, 15000);
-
 // 5. Manejador Central de Errores (Evita exponer información técnica sensible en producción)
 app.use((err, req, res, next) => {
   console.error('❌ Error capturado en servidor:', err.message);

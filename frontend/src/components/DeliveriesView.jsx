@@ -9,11 +9,13 @@ import {
   Check, 
   Send, 
   Plus, 
-  Receipt,
-  X,
-  CreditCard,
-  Smartphone,
-  Wallet
+  Receipt, 
+  X, 
+  CreditCard, 
+  Smartphone, 
+  Wallet,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
 import { openWhatsAppDelivery } from '../services/whatsapp.js';
@@ -23,13 +25,16 @@ export default function DeliveriesView({
   tenant,
   onSettleOrders,
   onStartDelivery,
-  onUpdateStatus
+  onUpdateStatus,
+  onEditOrder,
+  onCancelOrder
 }) {
   // Solo pedidos de tipo Domicilio
   const deliveryOrders = orders.filter((o) => o.tipo === 'delivery');
 
   // Filtros: 'pendientes' (sin cobrar), 'todos', 'cobrados'
   const [filter, setFilter] = useState('pendientes');
+  const [filterDomiciliario, setFilterDomiciliario] = useState('todos');
   const [selectedIds, setSelectedIds] = useState([]);
   
   // Modal de Liquidación
@@ -39,6 +44,8 @@ export default function DeliveriesView({
   const [montoRecibido, setMontoRecibido] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const domiciliarios = tenant?.domiciliarios || [];
+
   // Pedidos pendientes de pago
   const pendingPaymentOrders = deliveryOrders.filter((o) => !o.cobrado);
   const settledOrders = deliveryOrders.filter((o) => o.cobrado);
@@ -47,10 +54,18 @@ export default function DeliveriesView({
   const totalPendienteCobro = pendingPaymentOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
   const totalCobradoHoy = settledOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
+  // Pedidos pendientes por repartidor seleccionado
+  const pendingByDriver = filterDomiciliario === 'todos'
+    ? pendingPaymentOrders
+    : pendingPaymentOrders.filter((o) => o.domiciliarioId === filterDomiciliario);
+  const totalPendienteDriver = pendingByDriver.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const activeDriverObj = domiciliarios.find((d) => d.id === filterDomiciliario);
+
   // Lista según filtro
   const displayedOrders = deliveryOrders.filter((o) => {
-    if (filter === 'pendientes') return !o.cobrado;
-    if (filter === 'cobrados') return o.cobrado;
+    if (filter === 'pendientes' && o.cobrado) return false;
+    if (filter === 'cobrados' && !o.cobrado) return false;
+    if (filterDomiciliario !== 'todos' && o.domiciliarioId !== filterDomiciliario) return false;
     return true;
   });
 
@@ -172,34 +187,64 @@ export default function DeliveriesView({
           padding: '14px 20px'
         }}
       >
-        {/* Filtros de Pestaña */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {[
-            { id: 'pendientes', label: `Pendientes de Pago (${pendingPaymentOrders.length})` },
-            { id: 'todos', label: `Todos los Domicilios (${deliveryOrders.length})` },
-            { id: 'cobrados', label: `Liquidados (${settledOrders.length})` }
-          ].map((f) => {
-            const isActive = filter === f.id;
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setFilter(f.id)}
+        {/* Filtros de Pestaña y Selector de Repartidor */}
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {[
+              { id: 'pendientes', label: `Pendientes (${pendingPaymentOrders.length})` },
+              { id: 'todos', label: `Todos (${deliveryOrders.length})` },
+              { id: 'cobrados', label: `Liquidados (${settledOrders.length})` }
+            ].map((f) => {
+              const isActive = filter === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFilter(f.id)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    fontSize: '0.825rem',
+                    fontWeight: '700',
+                    backgroundColor: isActive ? 'var(--brand-primary, #e27329)' : '#2b180d',
+                    color: isActive ? '#fff' : '#fbeee0',
+                    border: isActive ? '1.5px solid var(--brand-gold, #ffcc00)' : '1px solid #5c351e',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Selector de Repartidor */}
+          {domiciliarios.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#ffcc00', fontWeight: '800' }}>🛵 Repartidor:</span>
+              <select
+                value={filterDomiciliario}
+                onChange={(e) => setFilterDomiciliario(e.target.value)}
                 style={{
-                  padding: '8px 16px',
+                  backgroundColor: '#1f1109',
+                  color: '#ffcc00',
+                  border: '1.5px solid #5c351e',
                   borderRadius: '10px',
+                  padding: '7px 12px',
                   fontSize: '0.825rem',
-                  fontWeight: '700',
-                  backgroundColor: isActive ? 'var(--brand-primary, #e27329)' : '#2b180d',
-                  color: isActive ? '#fff' : '#fbeee0',
-                  border: isActive ? '1.5px solid var(--brand-gold, #ffcc00)' : '1px solid #5c351e',
+                  fontWeight: '800',
                   cursor: 'pointer'
                 }}
               >
-                {f.label}
-              </button>
-            );
-          })}
+                <option value="todos">Todos los Repartidores</option>
+                {domiciliarios.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.nombre} ({pendingPaymentOrders.filter((o) => o.domiciliarioId === d.id).length} pend.)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Botones de Liquidación y Creación */}
@@ -231,11 +276,11 @@ export default function DeliveriesView({
             </button>
           )}
 
-          {pendingPaymentOrders.length > 0 && (
+          {pendingByDriver.length > 0 && (
             <button
               type="button"
-              onClick={() => handleOpenSettle(pendingPaymentOrders)}
-              title="Liquidar todos los domicilios que el repartidor entregó durante el turno"
+              onClick={() => handleOpenSettle(pendingByDriver)}
+              title={activeDriverObj ? `Liquidar todos los domicilios entregados por ${activeDriverObj.nombre}` : 'Liquidar todos los domicilios pendientes'}
               style={{
                 background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
                 color: '#ffcc00',
@@ -252,7 +297,7 @@ export default function DeliveriesView({
               }}
             >
               <Receipt size={18} />
-              <span>💰 Liquidar Todo al Domiciliario ({formatCurrency(totalPendienteCobro)})</span>
+              <span>💰 Liquidar {activeDriverObj ? activeDriverObj.nombre : 'Todo'} ({formatCurrency(totalPendienteDriver)})</span>
             </button>
           )}
 
@@ -463,6 +508,9 @@ export default function DeliveriesView({
                   <div style={{ fontSize: '0.8rem', color: '#fbeee0' }}>
                     👤 {orden.cliente} {orden.datosExtra ? `• 📞 ${orden.datosExtra}` : ''}
                   </div>
+                  <div style={{ fontSize: '0.78rem', color: '#ffcc00', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                    <Bike size={13} /> Repartidor: {orden.domiciliarioNombre || 'Por asignar'}
+                  </div>
                 </div>
 
                 {/* Ítems */}
@@ -483,7 +531,9 @@ export default function DeliveriesView({
                     alignItems: 'center',
                     borderTop: '1px solid #52301c',
                     paddingTop: '10px',
-                    marginTop: 'auto'
+                    marginTop: 'auto',
+                    flexWrap: 'wrap',
+                    gap: '8px'
                   }}
                 >
                   <div>
@@ -493,10 +543,59 @@ export default function DeliveriesView({
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {onEditOrder && !isCobrado && (
+                      <button
+                        type="button"
+                        onClick={() => onEditOrder(orden)}
+                        title="Modificar productos de este domicilio"
+                        style={{
+                          backgroundColor: '#4a2c1a',
+                          border: '1px solid #e27329',
+                          color: '#ffcc00',
+                          padding: '7px 10px',
+                          borderRadius: '8px',
+                          fontSize: '0.78rem',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Edit2 size={13} /> Editar
+                      </button>
+                    )}
+
+                    {onCancelOrder && !isCobrado && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`¿Seguro que deseas cancelar el domicilio #${orden.id} para ${orden.cliente}?`)) {
+                            onCancelOrder(orden.id);
+                          }
+                        }}
+                        title="Cancelar y eliminar este domicilio"
+                        style={{
+                          backgroundColor: '#491212',
+                          border: '1px solid #c62828',
+                          color: '#ff8a80',
+                          padding: '7px 9px',
+                          borderRadius: '8px',
+                          fontSize: '0.78rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+
                     <button
                       type="button"
-                      onClick={() => openWhatsAppDelivery(orden, tenant?.whatsappDomiciliario, tenant?.nombre)}
+                      onClick={() => openWhatsAppDelivery(orden, orden.domiciliarioTelefono || tenant?.whatsappDomiciliario, tenant?.nombre)}
                       title="Enviar comanda formateada al domiciliario por WhatsApp"
                       style={{
                         backgroundColor: '#25D366',
