@@ -28,20 +28,42 @@ export const getCorsMiddleware = () => {
   });
 };
 
-// Cabeceras HTTP seguras con Helmet
+// Cabeceras HTTP seguras con Helmet y estándares OWASP
 export const helmetMiddleware = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:", "https:"],
-      connectSrc: ["'self'", "ws:", "wss:", "http:", "https:"]
+      connectSrc: ["'self'", "ws:", "wss:", "http:", "https:"],
+      frameAncestors: ["'none'"]
     }
+  },
+  frameguard: {
+    action: 'deny'
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  referrerPolicy: {
+    policy: 'strict-origin-when-cross-origin'
   },
   crossOriginEmbedderPolicy: false
 });
+
+// Middleware complementario para asegurar cabeceras de seguridad estrictas en todas las respuestas
+export const securityHeadersMiddleware = (req, res, next) => {
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+};
 
 // Limitador de tasa global para mitigar DoS (Denegación de Servicio)
 export const globalLimiter = rateLimit({

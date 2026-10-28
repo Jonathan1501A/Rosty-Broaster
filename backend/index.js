@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 
 import {
   helmetMiddleware,
+  securityHeadersMiddleware,
   getCorsMiddleware,
   globalLimiter
 } from './middleware/security.js';
@@ -14,6 +15,7 @@ import ordersRouter from './routes/orders.js';
 import tablesRouter from './routes/tables.js';
 import statsRouter from './routes/stats.js';
 import tenantsRouter from './routes/tenants.js';
+import expensesRouter from './routes/expenses.js';
 import { store } from './data/store.js';
 
 // Cargar variables de entorno
@@ -52,6 +54,7 @@ app.set('io', io);
 
 // 1. Middlewares de Seguridad y Red
 app.use(helmetMiddleware);
+app.use(securityHeadersMiddleware);
 app.use(getCorsMiddleware());
 app.use(globalLimiter);
 app.use(express.json({ limit: '10kb' })); // Prevenir ataques por payload grande
@@ -78,6 +81,7 @@ app.use('/api/orders', ordersRouter);
 app.use('/api/tables', tablesRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/tenants', tenantsRouter);
+app.use('/api/expenses', expensesRouter);
 
 // Ruta raíz informativa
 app.get('/', (req, res) => {

@@ -11,6 +11,7 @@ import CompanySettingsModal from './components/CompanySettingsModal.jsx';
 import UserManagementModal from './components/UserManagementModal.jsx';
 import MenuManagementModal from './components/MenuManagementModal.jsx';
 import CloseCashModal from './components/CloseCashModal.jsx';
+import ExpensesModal from './components/ExpensesModal.jsx';
 import SuperAdminView from './components/SuperAdminView.jsx';
 import DeliveriesView from './components/DeliveriesView.jsx';
 import Toast from './components/Toast.jsx';
@@ -107,6 +108,7 @@ export default function App() {
   const [isUsersOpen, setIsUsersOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCloseCashOpen, setIsCloseCashOpen] = useState(false);
+  const [isExpensesOpen, setIsExpensesOpen] = useState(false);
 
   // Toasts
   const [toasts, setToasts] = useState([]);
@@ -299,6 +301,19 @@ export default function App() {
       },
       onStatsUpdated: (updatedStats) => {
         setStats(updatedStats);
+      },
+      onExpenseCreated: (data) => {
+        if (!data.tenantId || data.tenantId === currentTenantId) {
+          fetchData();
+          if (data.expense) {
+            addToast('info', `Gasto registrado: ${data.expense.concepto} (-$${Number(data.expense.monto).toLocaleString('es-CO')})`, '💸 Gasto Operativo');
+          }
+        }
+      },
+      onExpenseDeleted: (data) => {
+        if (!data.tenantId || data.tenantId === currentTenantId) {
+          fetchData();
+        }
       },
       onAnnouncement: (announcement) => {
         const toastType = announcement.type === 'danger' ? 'error' : 'info';
@@ -821,6 +836,7 @@ export default function App() {
         onOpenUsers={() => setIsUsersOpen(true)}
         onOpenMenu={() => setIsMenuOpen(true)}
         onOpenCloseCash={() => setIsCloseCashOpen(true)}
+        onOpenExpenses={() => setIsExpensesOpen(true)}
         isConnected={isConnected}
         pendingOrdersCount={pendingOrdersCount}
         pendingDeliveriesCount={pendingDeliveriesCount}
@@ -874,6 +890,7 @@ export default function App() {
                 stats={stats}
                 onRefresh={fetchData}
                 onOpenCloseCash={() => setIsCloseCashOpen(true)}
+                onOpenExpenses={() => setIsExpensesOpen(true)}
               />
             )}
             {activeTab === 'tables' && (
@@ -970,6 +987,22 @@ export default function App() {
         user={user}
         stats={stats}
         onConfirmCloseCash={handleConfirmCloseCash}
+      />
+
+      <ExpensesModal
+        isOpen={isExpensesOpen}
+        onClose={() => setIsExpensesOpen(false)}
+        tenant={tenant}
+        user={user}
+        stats={stats}
+        onExpenseAdded={() => {
+          fetchData();
+          addToast('success', 'Gasto registrado correctamente.', '💸 Gasto Guardado');
+        }}
+        onExpenseDeleted={() => {
+          fetchData();
+          addToast('info', 'Gasto anulado.', 'Gasto Eliminado');
+        }}
       />
 
       {/* Sistema Flotante de Toasts */}

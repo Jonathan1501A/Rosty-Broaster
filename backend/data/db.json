@@ -522,7 +522,8 @@
           "nombre": "Domiciliario 2",
           "telefono": ""
         }
-      ]
+      ],
+      "expenses": []
     },
     {
       "id": "pizzeria-napoles",
@@ -724,7 +725,8 @@
           "nombre": "Domiciliario 2",
           "telefono": ""
         }
-      ]
+      ],
+      "expenses": []
     }
   ],
   "users": [

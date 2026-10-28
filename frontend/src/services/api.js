@@ -224,6 +224,37 @@ export const api = {
     return data.closure;
   },
 
+  // Gastos del Día
+  getExpenses: async (tenantId) => {
+    const res = await fetch(`${API_URL}/api/expenses`, {
+      headers: getHeaders(tenantId)
+    });
+    if (!res.ok) throw new Error('Error al consultar gastos del día');
+    const data = await res.json();
+    return data.expenses || [];
+  },
+
+  createExpense: async (expenseData, tenantId) => {
+    const res = await fetch(`${API_URL}/api/expenses`, {
+      method: 'POST',
+      headers: getHeaders(tenantId),
+      body: JSON.stringify(expenseData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al registrar gasto');
+    return data.expense;
+  },
+
+  deleteExpense: async (expenseId, tenantId) => {
+    const res = await fetch(`${API_URL}/api/expenses/${expenseId}`, {
+      method: 'DELETE',
+      headers: getHeaders(tenantId)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al eliminar gasto');
+    return data;
+  },
+
   // Mesas
   getTables: async (tenantId) => {
     const res = await fetch(`${API_URL}/api/tables`, { headers: getHeaders(tenantId) });

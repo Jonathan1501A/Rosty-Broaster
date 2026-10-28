@@ -14,7 +14,8 @@ import {
   Users,
   DollarSign,
   Building2,
-  Bike
+  Bike,
+  TrendingDown
 } from 'lucide-react';
 import { toggleSound, getSoundEnabled } from '../services/sound.js';
 
@@ -29,6 +30,7 @@ export default function Navbar({
   onOpenUsers,
   onOpenMenu,
   onOpenCloseCash,
+  onOpenExpenses,
   isConnected,
   pendingOrdersCount = 0,
   pendingDeliveriesCount = 0
@@ -394,6 +396,28 @@ export default function Navbar({
             >
               <Users size={15} />
               <span>Personal</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenExpenses}
+              title="Registrar y consultar los gastos operativos del día"
+              style={{
+                backgroundColor: '#2b180d',
+                color: '#ffcc00',
+                border: '1.5px solid #c62828',
+                padding: '7px 12px',
+                borderRadius: '10px',
+                fontSize: '0.8rem',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <TrendingDown size={15} color="#ff7043" />
+              <span>Gastos</span>
             </button>
 
             <button

@@ -33,9 +33,15 @@ export default function CloseCashModal({
   const totalComandas = stats?.totalComandasDespachadas || 0;
   const metodos = stats?.desgloseMetodos || { efectivo: 0, nequi: 0, daviplata: 0, tarjeta: 0 };
   const cierresAnteriores = stats?.cierresAnteriores || [];
+  const totalGastos = stats?.totalGastos || 0;
+  const totalGastosEfectivo = stats?.totalGastosEfectivo || 0;
+  const totalGastosTransferencia = stats?.totalGastosTransferencia || 0;
+  const balanceNeto = stats?.balanceNeto !== undefined ? stats.balanceNeto : (totalVendido - totalGastos);
+  const gastosRegistrados = stats?.gastos || [];
 
   const base = Number(baseCash) || 0;
-  const efectivoEsperado = base + (metodos.efectivo || 0);
+  // Efectivo físico esperado en gaveta: Base + Ventas en efectivo - Gastos pagados en efectivo
+  const efectivoEsperado = base + (metodos.efectivo || 0) - totalGastosEfectivo;
   const efectivoReal = actualCash === '' ? efectivoEsperado : Number(actualCash) || 0;
   const diferencia = efectivoReal - efectivoEsperado;
 
@@ -180,7 +186,7 @@ export default function CloseCashModal({
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
           {activeTab === 'cierre' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Resumen Principal de Ventas */}
+              {/* Resumen Principal de Ventas y Gastos */}
               <div
                 style={{
                   backgroundColor: '#341e11',
@@ -188,43 +194,55 @@ export default function CloseCashModal({
                   borderRadius: '16px',
                   padding: '20px',
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                  gap: '16px'
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                  gap: '14px'
                 }}
               >
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: '#c4a48c', textTransform: 'uppercase', fontWeight: '800' }}>
-                    Venta Total Hoy
+                  <span style={{ fontSize: '0.72rem', color: '#c4a48c', textTransform: 'uppercase', fontWeight: '800' }}>
+                    Venta Bruta Total
                   </span>
-                  <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#ffcc00', fontFamily: 'var(--font-mono)' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#ffcc00', fontFamily: 'var(--font-mono)' }}>
                     {formatCurrency(totalVendido)}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#a5d6a7', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#a5d6a7', marginTop: '2px' }}>
                     {totalComandas} comandas cobradas
                   </div>
                 </div>
 
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: '#c4a48c', textTransform: 'uppercase', fontWeight: '800' }}>
-                    Recaudo en Efectivo
+                  <span style={{ fontSize: '0.72rem', color: '#ff8a80', textTransform: 'uppercase', fontWeight: '800' }}>
+                    Gastos del Día
                   </span>
-                  <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#81c784', fontFamily: 'var(--font-mono)' }}>
-                    {formatCurrency(metodos.efectivo || 0)}
+                  <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#ff5252', fontFamily: 'var(--font-mono)' }}>
+                    -{formatCurrency(totalGastos)}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#c4a48c', marginTop: '2px' }}>
-                    Dinero físico esperado
+                  <div style={{ fontSize: '0.72rem', color: '#ffcc80', marginTop: '2px' }}>
+                    {formatCurrency(totalGastosEfectivo)} en efectivo
                   </div>
                 </div>
 
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: '#c4a48c', textTransform: 'uppercase', fontWeight: '800' }}>
-                    Transferencias (Nequi/Daviplata)
+                  <span style={{ fontSize: '0.72rem', color: '#c4a48c', textTransform: 'uppercase', fontWeight: '800' }}>
+                    Balance Neto Turno
                   </span>
-                  <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#4fc3f7', fontFamily: 'var(--font-mono)' }}>
-                    {formatCurrency((metodos.nequi || 0) + (metodos.daviplata || 0) + (metodos.tarjeta || 0))}
+                  <div style={{ fontSize: '1.5rem', fontWeight: '900', color: balanceNeto >= 0 ? '#81c784' : '#ff5252', fontFamily: 'var(--font-mono)' }}>
+                    {formatCurrency(balanceNeto)}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#c4a48c', marginTop: '2px' }}>
-                    Medios electrónicos
+                  <div style={{ fontSize: '0.72rem', color: '#c4a48c', marginTop: '2px' }}>
+                    Utilidad operativa del día
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.72rem', color: '#c4a48c', textTransform: 'uppercase', fontWeight: '800' }}>
+                    Ventas en Efectivo
+                  </span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#81c784', fontFamily: 'var(--font-mono)' }}>
+                    {formatCurrency(metodos.efectivo || 0)}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#c4a48c', marginTop: '2px' }}>
+                    Recibido en caja
                   </div>
                 </div>
               </div>
@@ -299,7 +317,7 @@ export default function CloseCashModal({
                           : `Sobrante en Caja: ${formatCurrency(diferencia)}`}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: '#c4a48c' }}>
-                        Esperado en gaveta: {formatCurrency(efectivoEsperado)} (Base: {formatCurrency(base)} + Efectivo ventas: {formatCurrency(metodos.efectivo || 0)})
+                        Esperado en gaveta: {formatCurrency(efectivoEsperado)} (Base: {formatCurrency(base)} + Ventas efectivo: {formatCurrency(metodos.efectivo || 0)}{totalGastosEfectivo > 0 ? ` - Gastos efectivo: ${formatCurrency(totalGastosEfectivo)}` : ''})
                       </div>
                     </div>
                   </div>

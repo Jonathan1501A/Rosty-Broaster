@@ -156,6 +156,9 @@ class Store {
         const parsed = JSON.parse(raw);
         if (parsed.tenants && parsed.tenants.length > 0) {
           this.tenants = parsed.tenants;
+          for (const t of this.tenants) {
+            if (!Array.isArray(t.expenses)) t.expenses = [];
+          }
           this.users = parsed.users || [];
           this.ensureSuperadmin();
           this.ensureUniqueUsernames();
@@ -175,6 +178,7 @@ class Store {
         tables: createTablesArray(14),
         orders: [],
         salesHistory: [],
+        expenses: [],
         closures: []
       },
       {
@@ -183,6 +187,7 @@ class Store {
         tables: createTablesArray(10),
         orders: [],
         salesHistory: [],
+        expenses: [],
         closures: []
       }
     ];
@@ -425,6 +430,7 @@ class Store {
       })),
       orders: [],
       salesHistory: [],
+      expenses: [],
       closures: []
     };
 
@@ -942,10 +948,63 @@ class Store {
     return null;
   }
 
+  // --- GESTIÓN DE GASTOS DEL DÍA ---
+
+  getExpenses(tenantId = 'rosty-broaster') {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant) return [];
+    if (!Array.isArray(tenant.expenses)) tenant.expenses = [];
+    return tenant.expenses;
+  }
+
+  addExpense(tenantId, { concepto, categoria = 'insumos', monto = 0, metodoPago = 'efectivo', registradoPor = 'Administrador', notas = '' }) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant) throw new Error('Empresa no encontrada.');
+    if (!Array.isArray(tenant.expenses)) tenant.expenses = [];
+
+    const cleanConcepto = String(concepto || '').trim();
+    if (!cleanConcepto) throw new Error('El concepto o descripción del gasto es obligatorio.');
+
+    const cleanMonto = Math.round(Number(monto));
+    if (isNaN(cleanMonto) || cleanMonto <= 0) throw new Error('El monto del gasto debe ser mayor a $0.');
+
+    const cleanMetodo = metodoPago === 'transferencia' ? 'transferencia' : 'efectivo';
+
+    const newExpense = {
+      id: `GASTO-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 900 + 100)}`,
+      concepto: cleanConcepto,
+      categoria: String(categoria || 'insumos').toLowerCase(),
+      monto: cleanMonto,
+      metodoPago: cleanMetodo,
+      registradoPor: String(registradoPor || 'Administrador').trim(),
+      notas: String(notas || '').trim(),
+      timestamp: new Date().toISOString()
+    };
+
+    tenant.expenses.unshift(newExpense);
+    this.persist();
+    return newExpense;
+  }
+
+  deleteExpense(tenantId, expenseId) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant || !Array.isArray(tenant.expenses)) return false;
+
+    const idx = tenant.expenses.findIndex(e => e.id === expenseId);
+    if (idx === -1) return false;
+
+    tenant.expenses.splice(idx, 1);
+    this.persist();
+    return true;
+  }
+
   // --- MÉTRICAS Y AUDITORÍA POR EMPRESA ---
 
   getStats(tenantId = 'rosty-broaster') {
     const tenant = this.getTenant(tenantId);
+    if (!tenant) return null;
+    if (!Array.isArray(tenant.expenses)) tenant.expenses = [];
+
     const totalVendido = tenant.salesHistory.reduce((sum, r) => sum + r.total, 0);
     const totalComandasDespachadas = tenant.salesHistory.length;
     const promedioTicket = totalComandasDespachadas > 0 ? Math.round(totalVendido / totalComandasDespachadas) : 0;
@@ -954,6 +1013,12 @@ class Store {
     const totalNequi = tenant.salesHistory.filter(s => s.metodoPago === 'nequi').reduce((sum, s) => sum + s.total, 0);
     const totalDaviplata = tenant.salesHistory.filter(s => s.metodoPago === 'daviplata').reduce((sum, s) => sum + s.total, 0);
     const totalTarjeta = tenant.salesHistory.filter(s => s.metodoPago === 'tarjeta').reduce((sum, s) => sum + s.total, 0);
+
+    // Métricas de Gastos Operativos del Día
+    const totalGastos = tenant.expenses.reduce((sum, e) => sum + e.monto, 0);
+    const totalGastosEfectivo = tenant.expenses.filter(e => e.metodoPago === 'efectivo').reduce((sum, e) => sum + e.monto, 0);
+    const totalGastosTransferencia = tenant.expenses.filter(e => e.metodoPago !== 'efectivo').reduce((sum, e) => sum + e.monto, 0);
+    const balanceNeto = totalVendido - totalGastos;
 
     const ordenesActivas = tenant.orders.filter((o) => o.estado !== 'Despachado').length;
     const ordenesListas = tenant.orders.filter((o) => o.estado === 'Listo').length;
@@ -971,6 +1036,10 @@ class Store {
       totalVendido,
       totalComandasDespachadas,
       promedioTicket,
+      totalGastos,
+      totalGastosEfectivo,
+      totalGastosTransferencia,
+      balanceNeto,
       desgloseMetodos: {
         efectivo: totalEfectivo,
         nequi: totalNequi,
@@ -982,12 +1051,16 @@ class Store {
       mesasOcupadas,
       mesasLibres,
       ultimasVentas: tenant.salesHistory.slice(0, 15),
+      gastos: tenant.expenses.slice(0, 30),
       cierresAnteriores: tenant.closures.slice(0, 10)
     };
   }
 
   closeCashRegister(tenantId, { closedBy = 'Administrador', baseCash = 0, actualCash = 0, notes = '' }) {
     const tenant = this.getTenant(tenantId);
+    if (!tenant) throw new Error('Empresa no encontrada.');
+    if (!Array.isArray(tenant.expenses)) tenant.expenses = [];
+
     const totalVendido = tenant.salesHistory.reduce((sum, r) => sum + r.total, 0);
     const totalComandas = tenant.salesHistory.length;
 
@@ -996,9 +1069,15 @@ class Store {
     const totalDaviplata = tenant.salesHistory.filter(s => s.metodoPago === 'daviplata').reduce((sum, s) => sum + s.total, 0);
     const totalTarjeta = tenant.salesHistory.filter(s => s.metodoPago === 'tarjeta').reduce((sum, s) => sum + s.total, 0);
 
+    const totalGastos = tenant.expenses.reduce((sum, e) => sum + e.monto, 0);
+    const totalGastosEfectivo = tenant.expenses.filter(e => e.metodoPago === 'efectivo').reduce((sum, e) => sum + e.monto, 0);
+    const totalGastosTransferencia = tenant.expenses.filter(e => e.metodoPago !== 'efectivo').reduce((sum, e) => sum + e.monto, 0);
+    const balanceNeto = totalVendido - totalGastos;
+
     const base = Number(baseCash) || 0;
-    const efectivoEsperado = base + totalEfectivo;
-    const real = Number(actualCash) || efectivoEsperado;
+    // Efectivo físico esperado en gaveta: Base + Ventas Efectivo - Gastos retirados en Efectivo
+    const efectivoEsperado = base + totalEfectivo - totalGastosEfectivo;
+    const real = actualCash === '' || actualCash === null || actualCash === undefined ? efectivoEsperado : Number(actualCash);
     const diferencia = real - efectivoEsperado;
 
     const closureRecord = {
@@ -1016,17 +1095,23 @@ class Store {
         tarjeta: totalTarjeta
       },
       baseCaja: base,
+      totalGastos,
+      totalGastosEfectivo,
+      totalGastosTransferencia,
+      balanceNeto,
       efectivoEsperado,
       efectivoReal: real,
       diferencia,
       notas: notes || '',
-      comprobantes: [...tenant.salesHistory]
+      comprobantes: [...tenant.salesHistory],
+      gastosRegistrados: [...tenant.expenses]
     };
 
     tenant.closures.unshift(closureRecord);
 
-    // REINICIAR LAS VENTAS DEL DÍA A $0
+    // REINICIAR LAS VENTAS Y GASTOS DEL DÍA A $0
     tenant.salesHistory = [];
+    tenant.expenses = [];
 
     // Limpiar órdenes finalizadas para el siguiente día
     tenant.orders = tenant.orders.filter(o => o.estado !== 'Despachado');
