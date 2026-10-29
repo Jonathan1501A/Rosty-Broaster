@@ -15,7 +15,8 @@ import {
   DollarSign,
   Building2,
   Bike,
-  TrendingDown
+  TrendingDown,
+  ShoppingBag
 } from 'lucide-react';
 import { toggleSound, getSoundEnabled } from '../services/sound.js';
 
@@ -33,7 +34,8 @@ export default function Navbar({
   onOpenExpenses,
   isConnected,
   pendingOrdersCount = 0,
-  pendingDeliveriesCount = 0
+  pendingDeliveriesCount = 0,
+  pendingTakeoutsCount = 0
 }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [soundOn, setSoundOn] = useState(() => getSoundEnabled());
@@ -155,6 +157,42 @@ export default function Navbar({
 
             <button
               type="button"
+              onClick={() => setActiveTab('takeout')}
+              style={{
+                backgroundColor: activeTab === 'takeout' ? '#7b1fa2' : '#2b180d',
+                color: activeTab === 'takeout' ? '#fff' : '#fbeee0',
+                padding: '7px 14px',
+                borderRadius: '10px',
+                border: activeTab === 'takeout' ? '1.5px solid #ba68c8' : '1.5px solid #5c351e',
+                fontSize: '0.825rem',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <ShoppingBag size={16} />
+              <span>Para Llevar</span>
+              {pendingTakeoutsCount > 0 && (
+                <span
+                  style={{
+                    backgroundColor: '#e27329',
+                    color: '#fff',
+                    fontSize: '0.72rem',
+                    fontWeight: '900',
+                    padding: '2px 7px',
+                    borderRadius: '999px',
+                    marginLeft: '2px'
+                  }}
+                >
+                  {pendingTakeoutsCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab('deliveries')}
               style={{
                 backgroundColor: activeTab === 'deliveries' ? '#0288d1' : '#2b180d',
@@ -269,6 +307,42 @@ export default function Navbar({
             >
               <UtensilsCrossed size={15} />
               <span>Mesas</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('takeout')}
+              style={{
+                backgroundColor: activeTab === 'takeout' ? '#7b1fa2' : '#2b180d',
+                color: activeTab === 'takeout' ? '#fff' : '#fbeee0',
+                padding: '7px 13px',
+                borderRadius: '10px',
+                border: activeTab === 'takeout' ? '1.5px solid #ba68c8' : '1.5px solid #5c351e',
+                fontSize: '0.8rem',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <ShoppingBag size={15} />
+              <span>Para Llevar</span>
+              {pendingTakeoutsCount > 0 && (
+                <span
+                  style={{
+                    backgroundColor: '#e27329',
+                    color: '#fff',
+                    fontSize: '0.7rem',
+                    fontWeight: '900',
+                    padding: '1px 6px',
+                    borderRadius: '999px',
+                    marginLeft: '2px'
+                  }}
+                >
+                  {pendingTakeoutsCount}
+                </span>
+              )}
             </button>
 
             <button

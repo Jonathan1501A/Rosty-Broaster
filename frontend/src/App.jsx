@@ -14,6 +14,7 @@ import CloseCashModal from './components/CloseCashModal.jsx';
 import ExpensesModal from './components/ExpensesModal.jsx';
 import SuperAdminView from './components/SuperAdminView.jsx';
 import DeliveriesView from './components/DeliveriesView.jsx';
+import TakeoutView from './components/TakeoutView.jsx';
 import Toast from './components/Toast.jsx';
 
 import { api } from './services/api.js';
@@ -279,6 +280,16 @@ export default function App() {
         if (updatedOrder.estado === 'Listo') {
           playReadySound();
           addToast('info', `¡Pedido para ${updatedOrder.destino} está listo para servir!`, '🍽️ Pedido Listo');
+        }
+      },
+      onOrdersSettled: (data) => {
+        if (data?.settledOrders) {
+          setOrders((prev) =>
+            prev.map((o) => {
+              const matching = data.settledOrders.find((so) => so.id === o.id);
+              return matching ? { ...o, ...matching, cobrado: true, estado: 'Despachado' } : o;
+            })
+          );
         }
       },
       onOrderDeleted: (data) => {
@@ -691,10 +702,17 @@ export default function App() {
       )
     );
 
+    const firstOrder = orders.find((o) => orderIds.includes(o.id));
+    const isTakeout = firstOrder?.tipo === 'takeout';
+    const label = isTakeout
+      ? orderIds.length === 1 ? 'pedido para llevar cobrado' : 'pedidos para llevar cobrados'
+      : orderIds.length === 1 ? 'domicilio cobrado' : 'domicilios liquidados';
+    const toastTitle = isTakeout ? '🛍️ Pedido Para Llevar Cobrado' : '💰 Domicilio Registrado en Caja';
+
     addToast(
       'success',
-      `${orderIds.length} ${orderIds.length === 1 ? 'domicilio cobrado' : 'domicilios liquidados'} con método ${payload.metodoPago || 'efectivo'}.`,
-      '💰 Domicilios Registrados en Caja'
+      `${orderIds.length} ${label} con método ${payload.metodoPago || 'efectivo'}.`,
+      toastTitle
     );
 
     // Sincronizar por BroadcastChannel
@@ -772,6 +790,9 @@ export default function App() {
   // Conteo de domicilios pendientes de cobro para el badge de navegación
   const pendingDeliveriesCount = orders.filter((o) => o.tipo === 'delivery' && !o.cobrado).length;
 
+  // Conteo de pedidos para llevar pendientes de cobro para el badge de navegación
+  const pendingTakeoutsCount = orders.filter((o) => o.tipo === 'takeout' && !o.cobrado).length;
+
   // Si no está autenticado, mostrar Login Modal estricto con selector de empresa
   if (!user) {
     return (
@@ -840,14 +861,27 @@ export default function App() {
         isConnected={isConnected}
         pendingOrdersCount={pendingOrdersCount}
         pendingDeliveriesCount={pendingDeliveriesCount}
+        pendingTakeoutsCount={pendingTakeoutsCount}
       />
 
       {/* Contenido Principal con Aislamiento Estricto por Rol */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* EL MESERO PUEDE NAVEGAR ENTRE SALÓN Y DOMICILIOS */}
+        {/* EL MESERO PUEDE NAVEGAR ENTRE SALÓN, PARA LLEVAR Y DOMICILIOS */}
         {role === 'waiter' && (
           <>
-            {activeTab === 'deliveries' ? (
+            {activeTab === 'takeout' && (
+              <TakeoutView
+                orders={orders}
+                tenant={tenant}
+                user={user}
+                onSettleOrders={handleSettleOrders}
+                onStartTakeout={handleStartTakeout}
+                onUpdateStatus={handleUpdateOrderStatus}
+                onEditOrder={handleEditOrder}
+                onCancelOrder={handleCancelOrder}
+              />
+            )}
+            {activeTab === 'deliveries' && (
               <DeliveriesView
                 orders={orders}
                 tenant={tenant}
@@ -857,7 +891,8 @@ export default function App() {
                 onEditOrder={handleEditOrder}
                 onCancelOrder={handleCancelOrder}
               />
-            ) : (
+            )}
+            {activeTab === 'tables' && (
               <TablesView
                 tables={tables}
                 onOpenTableOrder={handleOpenTableOrder}
@@ -901,6 +936,18 @@ export default function App() {
                 onStartTakeout={handleStartTakeout}
                 onOpenCheckout={handleOpenCheckout}
                 onCancelTableOrder={handleCancelTableOrder}
+              />
+            )}
+            {activeTab === 'takeout' && (
+              <TakeoutView
+                orders={orders}
+                tenant={tenant}
+                user={user}
+                onSettleOrders={handleSettleOrders}
+                onStartTakeout={handleStartTakeout}
+                onUpdateStatus={handleUpdateOrderStatus}
+                onEditOrder={handleEditOrder}
+                onCancelOrder={handleCancelOrder}
               />
             )}
             {activeTab === 'deliveries' && (

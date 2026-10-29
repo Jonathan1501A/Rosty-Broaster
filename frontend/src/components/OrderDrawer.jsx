@@ -130,7 +130,7 @@ export default function OrderDrawer({
       mesaNumero: servicioTipo === 'dine_in' ? Number(mesaNumero || 1) : null,
       destino: servicioTipo === 'dine_in' ? `Mesa ${mesaNumero || 1}` : servicioTipo === 'delivery' ? finalAddress : 'Retiro en Barra',
       cliente: finalCustomerName,
-      datosExtra: servicioTipo === 'delivery' ? `Tel: ${finalPhone}` : servicioTipo === 'takeout' ? 'Para llevar' : 'Salón',
+      datosExtra: servicioTipo === 'delivery' ? `Tel: ${finalPhone}` : servicioTipo === 'takeout' ? (customerData.phone.trim() ? `Tel/Nota: ${customerData.phone.trim()}` : 'Para llevar') : 'Salón',
       items: cart,
       total: calculateTotal(),
       domiciliarioId,
@@ -549,17 +549,31 @@ export default function OrderDrawer({
             )}
 
             {servicioTipo === 'takeout' && (
-              <div style={{ padding: '16px', backgroundColor: '#2b180d', borderBottom: '1.5px solid #5c351e' }}>
-                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#ffcc00', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                  🛍️ Nombre de quien retira en barra:
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Luz Marina"
-                  value={customerData.name}
-                  onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
-                  style={{ width: '100%', fontSize: '0.85rem' }}
-                />
+              <div style={{ padding: '16px', backgroundColor: '#2b180d', borderBottom: '1.5px solid #5c351e', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#ffcc00', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                    🛍️ Nombre del cliente (Retiro en barra): *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Luz Marina / Carlos"
+                    value={customerData.name}
+                    onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
+                    style={{ width: '100%', fontSize: '0.85rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#c4a48c', display: 'block', marginBottom: '4px' }}>
+                    Teléfono o Nota adicional (Opcional):
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 3201234567 / Sin cebolla"
+                    value={customerData.phone}
+                    onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
+                    style={{ width: '100%', fontSize: '0.85rem' }}
+                  />
+                </div>
               </div>
             )}
 
