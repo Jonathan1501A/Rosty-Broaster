@@ -923,6 +923,7 @@ export default function App() {
             {activeTab === 'reports' && (
               <ReportsView
                 stats={stats}
+                tenant={tenant}
                 onRefresh={fetchData}
                 onOpenCloseCash={() => setIsCloseCashOpen(true)}
                 onOpenExpenses={() => setIsExpensesOpen(true)}

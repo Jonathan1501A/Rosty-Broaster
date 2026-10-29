@@ -9,9 +9,12 @@ import {
   Printer, 
   History,
   Lock,
-  ArrowRight
+  ArrowRight,
+  Eye,
+  TrendingDown
 } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
+import ClosureDetailModal from './ClosureDetailModal.jsx';
 
 export default function CloseCashModal({ 
   isOpen, 
@@ -26,6 +29,7 @@ export default function CloseCashModal({
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('cierre'); // 'cierre' | 'historial'
+  const [selectedHistClosure, setSelectedHistClosure] = useState(null);
 
   if (!isOpen) return null;
 
@@ -349,44 +353,79 @@ export default function CloseCashModal({
                   No hay cierres anteriores registrados todavía.
                 </div>
               ) : (
-                cierresAnteriores.map((c) => (
-                  <div
-                    key={c.id}
-                    style={{
-                      backgroundColor: '#341e11',
-                      border: '1.5px solid #52301c',
-                      borderRadius: '12px',
-                      padding: '14px 18px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: '12px'
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: '900', color: '#ffcc00', fontSize: '0.95rem' }}>
-                        {c.fechaFormateada || new Date(c.fecha).toLocaleDateString()} • {c.id}
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#c4a48c', marginTop: '2px' }}>
-                        Cerrado por: <strong>{c.cerradoPor}</strong> • {c.totalComandas} comandas
-                      </div>
-                      {c.notas && (
-                        <div style={{ fontSize: '0.75rem', color: '#fbeee0', fontStyle: 'italic', marginTop: '2px' }}>
-                          "{c.notas}"
-                        </div>
-                      )}
-                    </div>
+                cierresAnteriores.map((c) => {
+                  const venta = Number(c.totalVendido) || 0;
+                  const gasto = Number(c.totalGastos) || 0;
+                  const neto = c.balanceNeto !== undefined ? Number(c.balanceNeto) : (venta - gasto);
+                  const dif = Number(c.diferencia) || 0;
 
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#81c784', fontFamily: 'var(--font-mono)' }}>
-                        {formatCurrency(c.totalVendido)}
+                  return (
+                    <div
+                      key={c.id}
+                      style={{
+                        backgroundColor: '#341e11',
+                        border: '1.5px solid #52301c',
+                        borderRadius: '12px',
+                        padding: '14px 18px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '12px',
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      <div style={{ flex: '1 1 240px' }}>
+                        <div style={{ fontWeight: '900', color: '#ffcc00', fontSize: '0.95rem' }}>
+                          {c.fechaFormateada || new Date(c.fecha).toLocaleDateString()} • {c.id}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#c4a48c', marginTop: '2px' }}>
+                          Cerrado por: <strong>{c.cerradoPor}</strong> • {c.totalComandas || 0} comandas
+                        </div>
+                        {c.notas && (
+                          <div style={{ fontSize: '0.75rem', color: '#fbeee0', fontStyle: 'italic', marginTop: '2px' }}>
+                            "{c.notas}"
+                          </div>
+                        )}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: c.diferencia === 0 ? '#a5d6a7' : '#ff8a80' }}>
-                        {c.diferencia === 0 ? '✓ Cuadre exacto' : `Dif: ${formatCurrency(c.diferencia)}`}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '1.15rem', fontWeight: '900', color: '#ffcc00', fontFamily: 'var(--font-mono)' }}>
+                            {formatCurrency(venta)}
+                          </div>
+                          {gasto > 0 && (
+                            <div style={{ fontSize: '0.72rem', color: '#ff5252' }}>
+                              Gastos: -{formatCurrency(gasto)}
+                            </div>
+                          )}
+                          <div style={{ fontSize: '0.8rem', fontWeight: '800', color: neto >= 0 ? '#81c784' : '#ff5252' }}>
+                            Neto: {formatCurrency(neto)}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedHistClosure(c)}
+                          style={{
+                            backgroundColor: '#2b180d',
+                            border: '1.5px solid #ffcc00',
+                            color: '#ffcc00',
+                            padding: '7px 12px',
+                            borderRadius: '8px',
+                            fontSize: '0.78rem',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Eye size={14} /> Detalle
+                        </button>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}
@@ -445,6 +484,14 @@ export default function CloseCashModal({
           </div>
         )}
       </div>
+
+      {/* Modal de Detalle Completo de Cierre Histórico */}
+      <ClosureDetailModal
+        isOpen={Boolean(selectedHistClosure)}
+        onClose={() => setSelectedHistClosure(null)}
+        closure={selectedHistClosure}
+        tenant={tenant}
+      />
     </div>
   );
 }

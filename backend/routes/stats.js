@@ -15,4 +15,27 @@ router.get('/', (req, res) => {
   res.json({ stats });
 });
 
+/**
+ * @route GET /api/stats/closures
+ * @desc Historial de cuentas y cierres anteriores (Cortes Z) de la empresa
+ */
+router.get('/closures', (req, res) => {
+  const tenantId = getTenantId(req);
+  const closures = store.getClosures(tenantId);
+  res.json({ closures });
+});
+
+/**
+ * @route GET /api/stats/closures/:id
+ * @desc Detalle completo de una cuenta o cierre anterior específico
+ */
+router.get('/closures/:id', (req, res) => {
+  const tenantId = getTenantId(req);
+  const closure = store.getClosureById(tenantId, req.params.id);
+  if (!closure) {
+    return res.status(404).json({ error: 'Cierre no encontrado.' });
+  }
+  res.json({ closure });
+});
+
 export default router;

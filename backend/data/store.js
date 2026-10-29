@@ -1052,8 +1052,37 @@ class Store {
       mesasLibres,
       ultimasVentas: tenant.salesHistory.slice(0, 15),
       gastos: tenant.expenses.slice(0, 30),
-      cierresAnteriores: tenant.closures.slice(0, 10)
+      cierresAnteriores: this.getClosures(tenantId).slice(0, 50)
     };
+  }
+
+  getClosures(tenantId = 'rosty-broaster') {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant || !Array.isArray(tenant.closures)) return [];
+
+    return tenant.closures.map((c) => {
+      const totalVendido = Number(c.totalVendido) || 0;
+      const totalGastos = Number(c.totalGastos) || 0;
+      const totalGastosEfectivo = Number(c.totalGastosEfectivo) || 0;
+      const totalGastosTransferencia = Number(c.totalGastosTransferencia) || 0;
+      const balanceNeto = c.balanceNeto !== undefined ? Number(c.balanceNeto) : (totalVendido - totalGastos);
+
+      return {
+        ...c,
+        totalVendido,
+        totalGastos,
+        totalGastosEfectivo,
+        totalGastosTransferencia,
+        balanceNeto,
+        comprobantes: Array.isArray(c.comprobantes) ? c.comprobantes : [],
+        gastosRegistrados: Array.isArray(c.gastosRegistrados) ? c.gastosRegistrados : []
+      };
+    });
+  }
+
+  getClosureById(tenantId = 'rosty-broaster', closureId) {
+    const closures = this.getClosures(tenantId);
+    return closures.find((c) => c.id === closureId) || null;
   }
 
   closeCashRegister(tenantId, { closedBy = 'Administrador', baseCash = 0, actualCash = 0, notes = '' }) {

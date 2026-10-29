@@ -363,6 +363,20 @@ export const api = {
     return data.stats;
   },
 
+  getClosures: async (tenantId) => {
+    const res = await fetch(`${API_URL}/api/stats/closures`, { headers: getHeaders(tenantId) });
+    if (!res.ok) throw new Error('Error al consultar historial de cuentas anteriores');
+    const data = await res.json();
+    return data.closures || [];
+  },
+
+  getClosureById: async (closureId, tenantId) => {
+    const res = await fetch(`${API_URL}/api/stats/closures/${closureId}`, { headers: getHeaders(tenantId) });
+    if (!res.ok) throw new Error('Error al consultar detalle del cierre');
+    const data = await res.json();
+    return data.closure;
+  },
+
   // Estado del servidor y normativas
   getHealth: async () => {
     const res = await fetch(`${API_URL}/api/health`);
