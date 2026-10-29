@@ -453,6 +453,91 @@
       "salesHistory": [],
       "closures": [
         {
+          "id": "CORTE-2810",
+          "empresaId": "rosty-broaster",
+          "fecha": "2026-10-28T22:30:00.000Z",
+          "fechaFormateada": "miércoles, 28 de octubre de 2026, 5:30 p. m.",
+          "cerradoPor": "Administrador",
+          "totalVendido": 178000,
+          "totalComandas": 4,
+          "porMetodoPago": {
+            "efectivo": 88000,
+            "nequi": 90000,
+            "daviplata": 0,
+            "tarjeta": 0
+          },
+          "baseCaja": 50000,
+          "totalGastos": 25000,
+          "totalGastosEfectivo": 25000,
+          "totalGastosTransferencia": 0,
+          "balanceNeto": 153000,
+          "efectivoEsperado": 113000,
+          "efectivoReal": 113000,
+          "diferencia": 0,
+          "notas": "Cierre de turno miércoles 28 de octubre. Cuadre exacto.",
+          "comprobantes": [
+            {
+              "id": "REC-2801",
+              "ordenId": "MESA-2",
+              "destino": "Mesa 2",
+              "cliente": "Salón",
+              "total": 45000,
+              "metodoPago": "efectivo",
+              "montoRecibido": 50000,
+              "cambio": 5000,
+              "despachadoPor": "Mesero Salón & Caja",
+              "timestamp": "2026-10-28T18:40:00.000Z"
+            },
+            {
+              "id": "REC-2802",
+              "ordenId": "MESA-4",
+              "destino": "Mesa 4",
+              "cliente": "Salón",
+              "total": 50000,
+              "metodoPago": "nequi",
+              "montoRecibido": 50000,
+              "cambio": 0,
+              "despachadoPor": "Mesero Salón & Caja",
+              "timestamp": "2026-10-28T19:15:00.000Z"
+            },
+            {
+              "id": "REC-2803",
+              "ordenId": "DOM-104",
+              "destino": "Carrera 7 #12-30",
+              "cliente": "Pedido Domicilio",
+              "total": 40000,
+              "metodoPago": "nequi",
+              "montoRecibido": 40000,
+              "cambio": 0,
+              "despachadoPor": "Domiciliario 1",
+              "timestamp": "2026-10-28T20:30:00.000Z"
+            },
+            {
+              "id": "REC-2804",
+              "ordenId": "LLEVAR-12",
+              "destino": "Para Llevar",
+              "cliente": "Cliente Mostrador",
+              "total": 43000,
+              "metodoPago": "efectivo",
+              "montoRecibido": 50000,
+              "cambio": 7000,
+              "despachadoPor": "Mesero Salón & Caja",
+              "timestamp": "2026-10-28T21:10:00.000Z"
+            }
+          ],
+          "gastosRegistrados": [
+            {
+              "id": "EXP-2801",
+              "concepto": "Bolsas térmicas y empaques desechables",
+              "categoria": "Insumos & Empaques",
+              "monto": 25000,
+              "metodoPago": "efectivo",
+              "registradoPor": "admin",
+              "timestamp": "2026-10-28T17:30:00.000Z"
+            }
+          ]
+        },
+        {
           "id": "CORTE-5473",
           "empresaId": "rosty-broaster",
           "fecha": "2026-10-16T22:00:45.473Z",

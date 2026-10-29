@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { DEFAULT_MENU } from './defaultMenu.js';
+import pool from '../db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -146,6 +147,68 @@ class Store {
     this.tenants = [];
     this.users = [];
     this.init();
+    this.initDbSync().catch((err) => {
+      console.warn('⚠️ [PostgreSQL Sync Boot Error]:', err.message);
+    });
+  }
+
+  async initDbSync() {
+    if (!pool) return;
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS app_store (
+          id VARCHAR(50) PRIMARY KEY,
+          data JSONB NOT NULL,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      const res = await pool.query(`SELECT data FROM app_store WHERE id = 'main'`);
+      if (res.rows.length > 0 && res.rows[0].data) {
+        const cloudData = res.rows[0].data;
+        if (Array.isArray(cloudData.tenants) && cloudData.tenants.length > 0) {
+          this.tenants = cloudData.tenants;
+          this.users = cloudData.users || [];
+          for (const t of this.tenants) {
+            if (!Array.isArray(t.expenses)) t.expenses = [];
+            if (!Array.isArray(t.closures)) t.closures = [];
+            if (!Array.isArray(t.orders)) t.orders = [];
+            if (!Array.isArray(t.salesHistory)) t.salesHistory = [];
+          }
+          this.ensureSuperadmin();
+          this.ensureUniqueUsernames();
+          try {
+            fs.writeFileSync(DB_FILE, JSON.stringify({ tenants: this.tenants, users: this.users }, null, 2), 'utf-8');
+          } catch (_) {}
+          console.log(`☁️ [PostgreSQL]: Datos persistentes sincronizados desde la nube (${this.tenants.length} restaurantes, ${this.users.length} usuarios).`);
+          return;
+        }
+      }
+
+      // Si la tabla en la nube es nueva, respaldar el estado local actual
+      await this.saveToDb();
+      console.log('☁️ [PostgreSQL]: Respaldo inicial guardado exitosamente en la nube.');
+    } catch (err) {
+      console.warn('⚠️ [PostgreSQL Sync]:', err.message);
+    }
+  }
+
+  async saveToDb() {
+    if (!pool) return;
+    try {
+      const payload = JSON.stringify({
+        tenants: this.tenants,
+        users: this.users
+      });
+      await pool.query(`
+        INSERT INTO app_store (id, data, updated_at)
+        VALUES ('main', $1::jsonb, NOW())
+        ON CONFLICT (id) DO UPDATE
+        SET data = EXCLUDED.data, updated_at = NOW();
+      `, [payload]);
+    } catch (err) {
+      console.warn('⚠️ [PostgreSQL Backup]:', err.message);
+    }
   }
 
   init() {
@@ -281,6 +344,8 @@ class Store {
     } catch (e) {
       console.error('Error al persistir base de datos a disco:', e.message);
     }
+    // Sincronizar en PostgreSQL si hay conexión activa
+    this.saveToDb().catch(() => {});
   }
 
   // --- GESTIÓN DE EMPRESAS (TENANTS) ---
@@ -1083,6 +1148,48 @@ class Store {
   getClosureById(tenantId = 'rosty-broaster', closureId) {
     const closures = this.getClosures(tenantId);
     return closures.find((c) => c.id === closureId) || null;
+  }
+
+  updateClosure(tenantId = 'rosty-broaster', closureId, data) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant || !Array.isArray(tenant.closures)) return null;
+
+    const idx = tenant.closures.findIndex((c) => c.id === closureId);
+    if (idx === -1) return null;
+
+    const existing = tenant.closures[idx];
+    const totalVendido = data.totalVendido !== undefined ? Number(data.totalVendido) : Number(existing.totalVendido) || 0;
+    const totalGastos = data.totalGastos !== undefined ? Number(data.totalGastos) : Number(existing.totalGastos) || 0;
+    const totalGastosEfectivo = data.totalGastosEfectivo !== undefined ? Number(data.totalGastosEfectivo) : Number(existing.totalGastosEfectivo) || 0;
+    const totalGastosTransferencia = data.totalGastosTransferencia !== undefined ? Number(data.totalGastosTransferencia) : Number(existing.totalGastosTransferencia) || 0;
+    const balanceNeto = data.balanceNeto !== undefined ? Number(data.balanceNeto) : (totalVendido - totalGastos);
+
+    const porMetodo = data.porMetodoPago || existing.porMetodoPago || { efectivo: 0, nequi: 0, daviplata: 0, tarjeta: 0 };
+    const baseCaja = data.baseCaja !== undefined ? Number(data.baseCaja) : Number(existing.baseCaja) || 0;
+    const efectivoEsperado = data.efectivoEsperado !== undefined ? Number(data.efectivoEsperado) : (baseCaja + (porMetodo.efectivo || 0) - totalGastosEfectivo);
+    const efectivoReal = data.efectivoReal !== undefined ? Number(data.efectivoReal) : Number(existing.efectivoReal) || efectivoEsperado;
+    const diferencia = data.diferencia !== undefined ? Number(data.diferencia) : (efectivoReal - efectivoEsperado);
+
+    tenant.closures[idx] = {
+      ...existing,
+      ...data,
+      id: existing.id,
+      empresaId: existing.empresaId,
+      totalVendido,
+      totalGastos,
+      totalGastosEfectivo,
+      totalGastosTransferencia,
+      balanceNeto,
+      baseCaja,
+      efectivoEsperado,
+      efectivoReal,
+      diferencia,
+      porMetodoPago: porMetodo,
+      notas: data.notas !== undefined ? data.notas : existing.notas
+    };
+
+    this.persist();
+    return this.getClosureById(tenantId, closureId);
   }
 
   closeCashRegister(tenantId, { closedBy = 'Administrador', baseCash = 0, actualCash = 0, notes = '' }) {

@@ -38,4 +38,17 @@ router.get('/closures/:id', (req, res) => {
   res.json({ closure });
 });
 
+/**
+ * @route PUT /api/stats/closures/:id
+ * @desc Actualizar valores o notas de una cuenta o cierre anterior específico
+ */
+router.put('/closures/:id', (req, res) => {
+  const tenantId = getTenantId(req);
+  const updated = store.updateClosure(tenantId, req.params.id, req.body);
+  if (!updated) {
+    return res.status(404).json({ error: 'Cierre no encontrado.' });
+  }
+  res.json({ message: 'Cierre actualizado con éxito.', closure: updated });
+});
+
 export default router;

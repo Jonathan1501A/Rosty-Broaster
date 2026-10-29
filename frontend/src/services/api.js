@@ -377,6 +377,17 @@ export const api = {
     return data.closure;
   },
 
+  updateClosure: async (closureId, updateData, tenantId) => {
+    const res = await fetch(`${API_URL}/api/stats/closures/${closureId}`, {
+      method: 'PUT',
+      headers: getHeaders(tenantId),
+      body: JSON.stringify(updateData)
+    });
+    if (!res.ok) throw new Error('Error al actualizar cierre');
+    const data = await res.json();
+    return data.closure;
+  },
+
   // Estado del servidor y normativas
   getHealth: async () => {
     const res = await fetch(`${API_URL}/api/health`);
