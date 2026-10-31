@@ -9,12 +9,15 @@ import {
   Receipt, 
   DollarSign, 
   Utensils,
-  Trash2
+  Trash2,
+  Printer
 } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
+import ComandaPrintModal from './ComandaPrintModal.jsx';
 
 export default function TablesView({ 
   tables = [], 
+  tenant,
   onOpenTableOrder, 
   onStartDelivery, 
   onStartTakeout, 
@@ -22,6 +25,7 @@ export default function TablesView({
   onCancelTableOrder
 }) {
   const [filter, setFilter] = useState('todas'); // 'todas' | 'libres' | 'ocupadas' | 'cuenta'
+  const [selectedPrintTable, setSelectedPrintTable] = useState(null);
 
   // Cálculos estadísticos rápidos
   const libresCount = tables.filter((t) => t.estado === 'libre').length;
@@ -338,6 +342,34 @@ export default function TablesView({
                       <Receipt size={16} /> Cobrar
                     </button>
 
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPrintTable({
+                        id: `MESA-${mesa.numero}`,
+                        tipo: 'dine_in',
+                        mesaNumero: mesa.numero,
+                        cliente: 'Salón',
+                        items: mesa.pedidoActual || [],
+                        total: tableTotal,
+                        timestamp: mesa.apertura || new Date().toISOString()
+                      })}
+                      title="Imprimir comanda térmica o pre-cuenta para el cliente"
+                      style={{
+                        backgroundColor: '#2b180d',
+                        border: '1.5px solid #ffcc00',
+                        color: '#ffcc00',
+                        padding: '10px 11px',
+                        borderRadius: '10px',
+                        fontSize: '0.825rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <Printer size={16} />
+                    </button>
+
                     {onCancelTableOrder && (
                       <button
                         type="button"
@@ -369,6 +401,14 @@ export default function TablesView({
           );
         })}
       </div>
+
+      {/* Modal de Impresión Térmica de Pre-cuenta / Comanda de Mesa */}
+      <ComandaPrintModal
+        isOpen={Boolean(selectedPrintTable)}
+        onClose={() => setSelectedPrintTable(null)}
+        order={selectedPrintTable}
+        tenant={tenant}
+      />
     </div>
   );
 }

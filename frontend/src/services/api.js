@@ -341,6 +341,18 @@ export const api = {
     return data.order;
   },
 
+  updateOrderDriver: async (orderId, { domiciliarioId, domiciliarioNombre, domiciliarioTelefono }, tenantId) => {
+    const targetTenant = tenantId || getActiveTenantId();
+    const res = await fetch(`${API_URL}/api/orders/${orderId}/driver`, {
+      method: 'PATCH',
+      headers: getHeaders(targetTenant),
+      body: JSON.stringify({ domiciliarioId, domiciliarioNombre, domiciliarioTelefono })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al actualizar repartidor');
+    return data.order;
+  },
+
   settleOrders: async (orderIds, payload = {}, tenantId) => {
     const res = await fetch(`${API_URL}/api/orders/settle`, {
       method: 'POST',
@@ -393,5 +405,63 @@ export const api = {
     const res = await fetch(`${API_URL}/api/health`);
     if (!res.ok) throw new Error('Servidor fuera de línea');
     return res.json();
+  },
+
+  // Notificaciones Permanentes de Administración General
+  getNotifications: async (tenantId) => {
+    const targetTenant = tenantId || getActiveTenantId();
+    const res = await fetch(`${API_URL}/api/tenants/${targetTenant}/notifications`, {
+      headers: getHeaders(targetTenant)
+    });
+    if (!res.ok) throw new Error('Error al consultar notificaciones');
+    const data = await res.json();
+    return data.notifications || [];
+  },
+
+  createNotification: async (tenantId, notifData) => {
+    const targetTenant = tenantId || getActiveTenantId();
+    const res = await fetch(`${API_URL}/api/tenants/${targetTenant}/notifications`, {
+      method: 'POST',
+      headers: getHeaders(targetTenant),
+      body: JSON.stringify(notifData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al crear notificación');
+    return data.notification;
+  },
+
+  markNotificationRead: async (tenantId, notifId, userId) => {
+    const targetTenant = tenantId || getActiveTenantId();
+    const res = await fetch(`${API_URL}/api/tenants/${targetTenant}/notifications/${notifId}/read`, {
+      method: 'PATCH',
+      headers: getHeaders(targetTenant),
+      body: JSON.stringify({ userId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al actualizar estado de notificación');
+    return data.notification;
+  },
+
+  markAllNotificationsRead: async (tenantId, userId) => {
+    const targetTenant = tenantId || getActiveTenantId();
+    const res = await fetch(`${API_URL}/api/tenants/${targetTenant}/notifications/read-all`, {
+      method: 'PATCH',
+      headers: getHeaders(targetTenant),
+      body: JSON.stringify({ userId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al actualizar notificaciones');
+    return data.notifications;
+  },
+
+  deleteNotification: async (tenantId, notifId) => {
+    const targetTenant = tenantId || getActiveTenantId();
+    const res = await fetch(`${API_URL}/api/tenants/${targetTenant}/notifications/${notifId}`, {
+      method: 'DELETE',
+      headers: getHeaders(targetTenant)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al eliminar notificación');
+    return data;
   }
 };

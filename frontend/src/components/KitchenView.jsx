@@ -11,10 +11,12 @@ import {
   Bike,
   ShoppingBag,
   UtensilsCrossed,
-  Clock
+  Clock,
+  Printer
 } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
 import { openWhatsAppDelivery } from '../services/whatsapp.js';
+import ComandaPrintModal from './ComandaPrintModal.jsx';
 
 export default function KitchenView({ 
   orders = [], 
@@ -25,6 +27,7 @@ export default function KitchenView({
   tenant
 }) {
   const [filterTipo, setFilterTipo] = useState('todos');
+  const [selectedPrintOrder, setSelectedPrintOrder] = useState(null);
 
   // Deduplicar órdenes por ID de forma defensiva para garantizar que nunca se rendericen tarjetas duplicadas
   const uniqueOrders = Array.from(
@@ -262,6 +265,27 @@ export default function KitchenView({
           </div>
 
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setSelectedPrintOrder(orden)}
+              title="Imprimir comanda de cocina en papel térmico"
+              style={{
+                backgroundColor: '#2b180d',
+                border: '1.5px solid #ffcc00',
+                color: '#ffcc00',
+                padding: '9px 12px',
+                borderRadius: '10px',
+                fontSize: '0.825rem',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              <Printer size={16} /> Comanda
+            </button>
+
             {isDelivery && (
               <button
                 type="button"
@@ -495,6 +519,14 @@ export default function KitchenView({
           </div>
         </div>
       </div>
+
+      {/* Modal de Impresión Térmica de Comanda de Cocina */}
+      <ComandaPrintModal
+        isOpen={Boolean(selectedPrintOrder)}
+        onClose={() => setSelectedPrintOrder(null)}
+        order={selectedPrintOrder}
+        tenant={tenant}
+      />
     </div>
   );
 }

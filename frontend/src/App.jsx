@@ -16,6 +16,7 @@ import SuperAdminView from './components/SuperAdminView.jsx';
 import DeliveriesView from './components/DeliveriesView.jsx';
 import TakeoutView from './components/TakeoutView.jsx';
 import Toast from './components/Toast.jsx';
+import NotificationsModal from './components/NotificationsModal.jsx';
 
 import { api } from './services/api.js';
 import { initSocket, disconnectSocket, joinTenantRoom } from './services/socket.js';
@@ -110,6 +111,10 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCloseCashOpen, setIsCloseCashOpen] = useState(false);
   const [isExpensesOpen, setIsExpensesOpen] = useState(false);
+
+  // Sistema de Notificaciones Permanentes
+  const [notifications, setNotifications] = useState([]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   // Toasts
   const [toasts, setToasts] = useState([]);
@@ -206,16 +211,18 @@ export default function App() {
   // Cargar datos iniciales desde el backend filtrados por currentTenantId
   const fetchData = useCallback(async () => {
     try {
-      const [fetchedTables, fetchedOrders, fetchedStats, fetchedTenant] = await Promise.all([
+      const [fetchedTables, fetchedOrders, fetchedStats, fetchedTenant, fetchedNotifs] = await Promise.all([
         api.getTables(currentTenantId).catch(() => null),
         api.getOrders({}, currentTenantId).catch(() => null),
         api.getStats(currentTenantId).catch(() => null),
-        api.getTenant(currentTenantId).catch(() => null)
+        api.getTenant(currentTenantId).catch(() => null),
+        api.getNotifications(currentTenantId).catch(() => [])
       ]);
 
       if (fetchedTables && fetchedTables.length > 0) setTables(fetchedTables);
       if (fetchedOrders && fetchedOrders.length > 0) setOrders(fetchedOrders);
       if (fetchedStats) setStats(fetchedStats);
+      if (fetchedNotifs && fetchedNotifs.length > 0) setNotifications(fetchedNotifs);
       if (fetchedTenant) {
         setTenant(fetchedTenant);
         applyTenantTheme(fetchedTenant);
@@ -325,6 +332,15 @@ export default function App() {
         if (!data.tenantId || data.tenantId === currentTenantId) {
           fetchData();
         }
+      },
+      onNotificationNew: (notif) => {
+        setNotifications((prev) => [notif, ...prev.filter(n => n.id !== notif.id)]);
+        playNewOrderSound();
+        const toastType = notif.prioridad === 'urgente' ? 'error' : notif.prioridad === 'alta' ? 'warning' : 'info';
+        addToast(toastType, notif.mensaje, `📢 ${notif.titulo}`);
+      },
+      onNotificationDeleted: ({ id }) => {
+        setNotifications((prev) => prev.filter(n => n.id !== id));
       },
       onAnnouncement: (announcement) => {
         const toastType = announcement.type === 'danger' ? 'error' : 'info';
@@ -784,6 +800,50 @@ export default function App() {
     }
   };
 
+  // Manejo de Notificaciones Permanentes de Administración
+  const handleCreateNotification = async (notifData) => {
+    const created = await api.createNotification(currentTenantId, notifData);
+    setNotifications((prev) => [created, ...prev.filter(n => n.id !== created.id)]);
+    addToast('success', 'Aviso oficial emitido y archivado.', '📢 Notificación Enviada');
+  };
+
+  const handleMarkNotificationRead = async (notifId, userId) => {
+    try {
+      const updated = await api.markNotificationRead(currentTenantId, notifId, userId);
+      setNotifications((prev) => prev.map(n => n.id === notifId ? updated : n));
+    } catch (_) {}
+  };
+
+  const handleMarkAllNotificationsRead = async (userId) => {
+    try {
+      const updatedList = await api.markAllNotificationsRead(currentTenantId, userId);
+      setNotifications(updatedList);
+      addToast('info', 'Todas las notificaciones marcadas como leídas.', 'Bandeja al Día');
+    } catch (_) {}
+  };
+
+  const handleDeleteNotification = async (notifId) => {
+    await api.deleteNotification(currentTenantId, notifId);
+    setNotifications((prev) => prev.filter(n => n.id !== notifId));
+    addToast('info', 'Aviso eliminado del historial.', 'Aviso Retirado');
+  };
+
+  // Asignar o cambiar domiciliario en cualquier momento
+  const handleUpdateDeliveryDriver = async (orderId, driverData) => {
+    try {
+      const updatedOrder = await api.updateOrderDriver(orderId, driverData, currentTenantId);
+      setOrders((prev) => prev.map(o => o.id === orderId ? updatedOrder : o));
+      addToast('success', `Repartidor: ${driverData.domiciliarioNombre || 'Sin asignar'}`, '🛵 Domicilio Actualizado');
+    } catch (err) {
+      addToast('error', err.message || 'Error al actualizar repartidor', 'Error');
+    }
+  };
+
+  const currentUserId = user?.id || user?.username || 'user';
+  const unreadNotificationsCount = notifications.filter(
+    (n) => !Array.isArray(n.leidoPor) || !n.leidoPor.includes(currentUserId)
+  ).length;
+
   // Conteo de pedidos pendientes para el badge de cocina
   const pendingOrdersCount = orders.filter((o) => (o.estado || '').toLowerCase() !== 'listo' && (o.estado || '').toLowerCase() !== 'despachado').length;
 
@@ -862,6 +922,8 @@ export default function App() {
         pendingOrdersCount={pendingOrdersCount}
         pendingDeliveriesCount={pendingDeliveriesCount}
         pendingTakeoutsCount={pendingTakeoutsCount}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
+        unreadNotificationsCount={unreadNotificationsCount}
       />
 
       {/* Contenido Principal con Aislamiento Estricto por Rol */}
@@ -890,11 +952,13 @@ export default function App() {
                 onUpdateStatus={handleUpdateOrderStatus}
                 onEditOrder={handleEditOrder}
                 onCancelOrder={handleCancelOrder}
+                onUpdateDeliveryDriver={handleUpdateDeliveryDriver}
               />
             )}
             {activeTab === 'tables' && (
               <TablesView
                 tables={tables}
+                tenant={tenant}
                 onOpenTableOrder={handleOpenTableOrder}
                 onStartDelivery={handleStartDelivery}
                 onStartTakeout={handleStartTakeout}
@@ -932,6 +996,7 @@ export default function App() {
             {activeTab === 'tables' && (
               <TablesView
                 tables={tables}
+                tenant={tenant}
                 onOpenTableOrder={handleOpenTableOrder}
                 onStartDelivery={handleStartDelivery}
                 onStartTakeout={handleStartTakeout}
@@ -960,6 +1025,7 @@ export default function App() {
                 onUpdateStatus={handleUpdateOrderStatus}
                 onEditOrder={handleEditOrder}
                 onCancelOrder={handleCancelOrder}
+                onUpdateDeliveryDriver={handleUpdateDeliveryDriver}
               />
             )}
             {activeTab === 'kitchen' && (
@@ -998,6 +1064,7 @@ export default function App() {
         items={checkoutModal.items}
         onConfirmCloseTable={handleConfirmCloseTable}
         user={user}
+        tenant={tenant}
       />
 
       {/* Modal de Normativas, Legal & Seguridad */}
@@ -1051,6 +1118,19 @@ export default function App() {
           fetchData();
           addToast('info', 'Gasto anulado.', 'Gasto Eliminado');
         }}
+      />
+
+      {/* Modal de Notificaciones Oficiales Permanentes */}
+      <NotificationsModal
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        notifications={notifications}
+        currentUser={user}
+        tenant={tenant}
+        onMarkRead={handleMarkNotificationRead}
+        onMarkAllRead={handleMarkAllNotificationsRead}
+        onCreateNotification={handleCreateNotification}
+        onDeleteNotification={handleDeleteNotification}
       />
 
       {/* Sistema Flotante de Toasts */}

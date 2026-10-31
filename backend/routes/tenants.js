@@ -136,6 +136,24 @@ router.post('/notify', (req, res) => {
     timestamp: new Date().toISOString()
   };
 
+  // Guardar permanente en cada empresa para que no se pierda al recargar
+  try {
+    const tenantsList = (!tenantId || tenantId === 'all') 
+      ? store.getTenants().map(t => t.id) 
+      : [tenantId];
+
+    for (const tId of tenantsList) {
+      store.addNotification(tId, {
+        titulo: payload.title,
+        mensaje: payload.message,
+        prioridad: type === 'danger' ? 'urgente' : type === 'warning' ? 'alta' : 'normal',
+        creadoPor: 'Administración General'
+      });
+    }
+  } catch (e) {
+    console.warn('Error al guardar notificación permanente:', e.message);
+  }
+
   const io = req.app.get('io');
   if (io) {
     if (!tenantId || tenantId === 'all') {
@@ -290,6 +308,84 @@ router.post('/:id/close-cash', (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+/**
+ * @route GET /api/tenants/:id/notifications
+ * @desc Obtener notificaciones permanentes del restaurante
+ */
+router.get('/:id/notifications', (req, res) => {
+  const notifications = store.getNotifications(req.params.id);
+  res.json({ notifications });
+});
+
+/**
+ * @route POST /api/tenants/:id/notifications
+ * @desc Crear y emitir una nueva notificación permanente de administración general
+ */
+router.post('/:id/notifications', (req, res) => {
+  try {
+    const { titulo, mensaje, prioridad, creadoPor } = req.body;
+    const notification = store.addNotification(req.params.id, {
+      titulo,
+      mensaje,
+      prioridad,
+      creadoPor: creadoPor || 'Administración General'
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(req.params.id).emit('notification:new', notification);
+      io.to(req.params.id).emit('superadmin:announcement', {
+        id: notification.id,
+        title: notification.titulo,
+        message: notification.mensaje,
+        type: notification.prioridad === 'urgente' ? 'danger' : notification.prioridad === 'alta' ? 'warning' : 'info',
+        timestamp: notification.fecha
+      });
+    }
+
+    res.status(201).json({ message: 'Notificación creada con éxito.', notification });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * @route PATCH /api/tenants/:id/notifications/:notifId/read
+ * @desc Marcar notificación como leída
+ */
+router.patch('/:id/notifications/:notifId/read', (req, res) => {
+  const { userId } = req.body;
+  const updated = store.markNotificationRead(req.params.id, req.params.notifId, userId);
+  if (!updated) return res.status(404).json({ error: 'Notificación no encontrada.' });
+  res.json({ notification: updated });
+});
+
+/**
+ * @route PATCH /api/tenants/:id/notifications/read-all
+ * @desc Marcar todas las notificaciones como leídas
+ */
+router.patch('/:id/notifications/read-all', (req, res) => {
+  const { userId } = req.body;
+  const list = store.markAllNotificationsRead(req.params.id, userId);
+  res.json({ notifications: list });
+});
+
+/**
+ * @route DELETE /api/tenants/:id/notifications/:notifId
+ * @desc Eliminar una notificación permanente
+ */
+router.delete('/:id/notifications/:notifId', (req, res) => {
+  const deleted = store.deleteNotification(req.params.id, req.params.notifId);
+  if (!deleted) return res.status(404).json({ error: 'Notificación no encontrada.' });
+
+  const io = req.app.get('io');
+  if (io) {
+    io.to(req.params.id).emit('notification:deleted', { id: req.params.notifId });
+  }
+
+  res.json({ message: 'Notificación eliminada correctamente.' });
 });
 
 export default router;

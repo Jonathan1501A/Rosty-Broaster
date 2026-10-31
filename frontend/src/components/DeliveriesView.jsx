@@ -15,10 +15,12 @@ import {
   Smartphone, 
   Wallet,
   Edit2,
-  Trash2
+  Trash2,
+  Printer
 } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
 import { openWhatsAppDelivery } from '../services/whatsapp.js';
+import ComandaPrintModal from './ComandaPrintModal.jsx';
 
 export default function DeliveriesView({
   orders = [],
@@ -27,7 +29,8 @@ export default function DeliveriesView({
   onStartDelivery,
   onUpdateStatus,
   onEditOrder,
-  onCancelOrder
+  onCancelOrder,
+  onUpdateDeliveryDriver
 }) {
   // Deduplicar órdenes por ID de forma defensiva
   const uniqueOrders = Array.from(new Map(orders.map((o) => [o.id, o])).values());
@@ -46,8 +49,20 @@ export default function DeliveriesView({
   const [metodoPago, setMetodoPago] = useState('efectivo');
   const [montoRecibido, setMontoRecibido] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPrintOrder, setSelectedPrintOrder] = useState(null);
 
   const domiciliarios = tenant?.domiciliarios || [];
+
+  const handleDriverChange = async (orderId, driverId) => {
+    const chosen = domiciliarios.find((d) => d.id === driverId);
+    if (onUpdateDeliveryDriver) {
+      await onUpdateDeliveryDriver(orderId, {
+        domiciliarioId: chosen ? chosen.id : null,
+        domiciliarioNombre: chosen ? chosen.nombre : null,
+        domiciliarioTelefono: chosen ? chosen.telefono : null
+      });
+    }
+  };
 
   // Pedidos pendientes de pago
   const pendingPaymentOrders = deliveryOrders.filter((o) => !o.cobrado);
@@ -511,8 +526,43 @@ export default function DeliveriesView({
                   <div style={{ fontSize: '0.8rem', color: '#fbeee0' }}>
                     👤 {orden.cliente} {orden.datosExtra ? `• 📞 ${orden.datosExtra}` : ''}
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#ffcc00', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                    <Bike size={13} /> Repartidor: {orden.domiciliarioNombre || 'Por asignar'}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      marginTop: '4px',
+                      backgroundColor: '#26160c',
+                      border: '1px solid #5c351e',
+                      borderRadius: '8px',
+                      padding: '3px 8px',
+                      width: 'fit-content'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Bike size={13} color="#ffcc00" />
+                    <span style={{ fontSize: '0.74rem', color: '#fbeee0', fontWeight: '700' }}>Repartidor:</span>
+                    <select
+                      value={orden.domiciliarioId || ''}
+                      onChange={(e) => handleDriverChange(orden.id, e.target.value)}
+                      style={{
+                        backgroundColor: '#1f1109',
+                        color: '#ffcc00',
+                        border: '1px solid #e27329',
+                        borderRadius: '6px',
+                        padding: '2px 6px',
+                        fontSize: '0.75rem',
+                        fontWeight: '800',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="">⚠️ Sin Asignar</option>
+                      {domiciliarios.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          🛵 {d.nombre}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -595,6 +645,27 @@ export default function DeliveriesView({
                         <Trash2 size={14} />
                       </button>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPrintOrder(orden)}
+                      title="Imprimir comanda / factura térmica para el repartidor"
+                      style={{
+                        backgroundColor: '#2b180d',
+                        border: '1.5px solid #ffcc00',
+                        color: '#ffcc00',
+                        padding: '8px 11px',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        fontWeight: '800',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Printer size={15} /> Ticket
+                    </button>
 
                     <button
                       type="button"
@@ -729,6 +800,54 @@ export default function DeliveriesView({
                 </div>
               ))}
             </div>
+
+            {/* Selector de Domiciliario en Liquidación (si es pedido individual) */}
+            {ordersToSettle.length === 1 && (
+              <div
+                style={{
+                  backgroundColor: '#2b180d',
+                  border: '1px solid #5c351e',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <span style={{ fontSize: '0.78rem', color: '#c4a48c', fontWeight: '800' }}>
+                  Repartidor que entrega dinero:
+                </span>
+                <select
+                  value={ordersToSettle[0]?.domiciliarioId || ''}
+                  onChange={async (e) => {
+                    const dId = e.target.value;
+                    await handleDriverChange(ordersToSettle[0].id, dId);
+                    const chosen = domiciliarios.find((d) => d.id === dId);
+                    setOrdersToSettle((prev) =>
+                      prev.map((o) =>
+                        o.id === ordersToSettle[0].id
+                          ? { ...o, domiciliarioId: dId, domiciliarioNombre: chosen ? chosen.nombre : null }
+                          : o
+                      )
+                    );
+                  }}
+                  style={{
+                    backgroundColor: '#1f1109',
+                    color: '#ffcc00',
+                    border: '1px solid #e27329',
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    fontSize: '0.8rem',
+                    fontWeight: '800'
+                  }}
+                >
+                  <option value="">⚠️ Sin Asignar</option>
+                  {domiciliarios.map((d) => (
+                    <option key={d.id} value={d.id}>🛵 {d.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Total a Entregar */}
             <div
@@ -880,6 +999,14 @@ export default function DeliveriesView({
           </div>
         </div>
       )}
+
+      {/* Modal de Impresión Térmica de Factura / Comanda */}
+      <ComandaPrintModal
+        isOpen={Boolean(selectedPrintOrder)}
+        onClose={() => setSelectedPrintOrder(null)}
+        order={selectedPrintOrder}
+        tenant={tenant}
+      />
     </div>
   );
 }

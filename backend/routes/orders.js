@@ -214,6 +214,37 @@ router.put('/:id', (req, res) => {
 });
 
 /**
+ * @route PATCH /api/orders/:id/driver
+ * @desc Asignar o cambiar el domiciliario de un pedido en cualquier momento
+ */
+router.patch('/:id/driver', (req, res) => {
+  const tenantId = getTenantId(req);
+  const { id } = req.params;
+  const { domiciliarioId, domiciliarioNombre, domiciliarioTelefono } = req.body;
+
+  const order = store.updateOrderDriver(tenantId, id, {
+    domiciliarioId,
+    domiciliarioNombre,
+    domiciliarioTelefono
+  });
+
+  if (!order) {
+    return res.status(404).json({ error: 'Pedido no encontrado.' });
+  }
+
+  const io = req.app.get('io');
+  if (io) {
+    io.to(tenantId).emit('order:updated', order);
+    io.to(tenantId).emit('orders:updated_list', store.getOrders(tenantId));
+  }
+
+  res.json({
+    message: 'Domiciliario actualizado correctamente.',
+    order
+  });
+});
+
+/**
  * @route DELETE /api/orders/:id
  * @desc Cancelar / eliminar comanda activa y liberar mesa
  */

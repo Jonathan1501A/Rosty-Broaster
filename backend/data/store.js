@@ -174,6 +174,7 @@ class Store {
             if (!Array.isArray(t.closures)) t.closures = [];
             if (!Array.isArray(t.orders)) t.orders = [];
             if (!Array.isArray(t.salesHistory)) t.salesHistory = [];
+            if (!Array.isArray(t.notifications)) t.notifications = [];
           }
           this.ensureSuperadmin();
           this.ensureUniqueUsernames();
@@ -221,6 +222,22 @@ class Store {
           this.tenants = parsed.tenants;
           for (const t of this.tenants) {
             if (!Array.isArray(t.expenses)) t.expenses = [];
+            if (!Array.isArray(t.closures)) t.closures = [];
+            if (!Array.isArray(t.orders)) t.orders = [];
+            if (!Array.isArray(t.salesHistory)) t.salesHistory = [];
+            if (!Array.isArray(t.notifications)) {
+              t.notifications = [
+                {
+                  id: `NOTIF-${Date.now()}`,
+                  titulo: '📢 Comunicado Oficial de Administración General',
+                  mensaje: '¡Bienvenidos al sistema de comandas y caja! Las circulares y directrices emitidas por la administración general quedarán guardadas permanentemente en este apartado.',
+                  prioridad: 'normal',
+                  creadoPor: 'Administración General',
+                  fecha: new Date().toISOString(),
+                  leidoPor: []
+                }
+              ];
+            }
           }
           this.users = parsed.users || [];
           this.ensureSuperadmin();
@@ -242,7 +259,8 @@ class Store {
         orders: [],
         salesHistory: [],
         expenses: [],
-        closures: []
+        closures: [],
+        notifications: []
       },
       {
         ...INITIAL_PIZZERIA_CONFIG,
@@ -251,7 +269,8 @@ class Store {
         orders: [],
         salesHistory: [],
         expenses: [],
-        closures: []
+        closures: [],
+        notifications: []
       }
     ];
 
@@ -1254,6 +1273,101 @@ class Store {
 
     this.persist();
     return closureRecord;
+  }
+
+  // --- SISTEMA DE NOTIFICACIONES PERMANENTES DE ADMINISTRACIÓN ---
+  getNotifications(tenantId = 'rosty-broaster') {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant) return [];
+    if (!Array.isArray(tenant.notifications)) {
+      tenant.notifications = [];
+    }
+    return tenant.notifications;
+  }
+
+  addNotification(tenantId = 'rosty-broaster', { titulo, mensaje, prioridad = 'normal', creadoPor = 'Administración General' }) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant) throw new Error('Restaurante no encontrado.');
+    if (!Array.isArray(tenant.notifications)) tenant.notifications = [];
+
+    const cleanTitulo = String(titulo || 'Aviso de Administración').trim();
+    const cleanMensaje = String(mensaje || '').trim();
+    if (!cleanMensaje) throw new Error('El mensaje de la notificación no puede estar vacío.');
+
+    const notif = {
+      id: `NOTIF-${Date.now()}`,
+      titulo: cleanTitulo,
+      mensaje: cleanMensaje,
+      prioridad: ['normal', 'alta', 'urgente'].includes(prioridad) ? prioridad : 'normal',
+      creadoPor: String(creadoPor).trim() || 'Administración General',
+      fecha: new Date().toISOString(),
+      leidoPor: []
+    };
+
+    tenant.notifications.unshift(notif);
+    this.persist();
+    return notif;
+  }
+
+  markNotificationRead(tenantId = 'rosty-broaster', notifId, userId) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant || !Array.isArray(tenant.notifications)) return null;
+
+    const notif = tenant.notifications.find(n => n.id === notifId);
+    if (!notif) return null;
+
+    if (!Array.isArray(notif.leidoPor)) notif.leidoPor = [];
+    const uid = String(userId || 'anon');
+    if (!notif.leidoPor.includes(uid)) {
+      notif.leidoPor.push(uid);
+      this.persist();
+    }
+    return notif;
+  }
+
+  markAllNotificationsRead(tenantId = 'rosty-broaster', userId) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant || !Array.isArray(tenant.notifications)) return [];
+
+    const uid = String(userId || 'anon');
+    for (const notif of tenant.notifications) {
+      if (!Array.isArray(notif.leidoPor)) notif.leidoPor = [];
+      if (!notif.leidoPor.includes(uid)) {
+        notif.leidoPor.push(uid);
+      }
+    }
+    this.persist();
+    return tenant.notifications;
+  }
+
+  deleteNotification(tenantId = 'rosty-broaster', notifId) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant || !Array.isArray(tenant.notifications)) return false;
+
+    const initialLen = tenant.notifications.length;
+    tenant.notifications = tenant.notifications.filter(n => n.id !== notifId);
+    if (tenant.notifications.length !== initialLen) {
+      this.persist();
+      return true;
+    }
+    return false;
+  }
+
+  // --- ASIGNACIÓN RÁPIDA DE DOMICILIARIO A PEDIDO ---
+  updateOrderDriver(tenantId, orderId, { domiciliarioId, domiciliarioNombre, domiciliarioTelefono }) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant) return null;
+
+    const order = tenant.orders.find((o) => o.id === orderId);
+    if (!order) return null;
+
+    order.domiciliarioId = domiciliarioId || null;
+    order.domiciliarioNombre = domiciliarioNombre || null;
+    order.domiciliarioTelefono = domiciliarioTelefono || null;
+    order.updatedAt = new Date().toISOString();
+
+    this.persist();
+    return order;
   }
 
   tickOrderTimers() {

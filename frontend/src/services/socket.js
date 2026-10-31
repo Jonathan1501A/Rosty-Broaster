@@ -88,6 +88,14 @@ export const initSocket = (tenantId = 'rosty-broaster', callbacks = {}) => {
     socket.on('expense:deleted', callbacks.onExpenseDeleted);
   }
 
+  if (callbacks.onNotificationNew) {
+    socket.on('notification:new', callbacks.onNotificationNew);
+  }
+
+  if (callbacks.onNotificationDeleted) {
+    socket.on('notification:deleted', callbacks.onNotificationDeleted);
+  }
+
   return socket;
 };
 

@@ -13,6 +13,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { MENU_CATEGORIES, formatCurrency } from '../data/menu.js';
+import JuiceFlavorModal from './JuiceFlavorModal.jsx';
 
 export default function OrderDrawer({ 
   isOpen, 
@@ -40,6 +41,52 @@ export default function OrderDrawer({
   const [selectedDomiciliarioId, setSelectedDomiciliarioId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [isJuiceModalOpen, setIsJuiceModalOpen] = useState(false);
+  const [juiceModalProduct, setJuiceModalProduct] = useState(null);
+  const [editingCartItem, setEditingCartItem] = useState(null);
+
+  const isJuiceProduct = (product) => {
+    if (!product) return false;
+    const name = String(product.name || '').toLowerCase();
+    const desc = String(product.desc || '').toLowerCase();
+    const cat = String(activeCategory || '').toLowerCase();
+    return name.includes('jugo') || desc.includes('mora') || desc.includes('maracuyá') || cat.includes('jugo');
+  };
+
+  const handleProductClick = (product) => {
+    if (isJuiceProduct(product)) {
+      setJuiceModalProduct(product);
+      setEditingCartItem(null);
+      setIsJuiceModalOpen(true);
+    } else {
+      handleAddToCart(product);
+    }
+  };
+
+  const handleOpenFlavorForEdit = (cartItem) => {
+    setJuiceModalProduct(cartItem);
+    setEditingCartItem(cartItem);
+    setIsJuiceModalOpen(true);
+  };
+
+  const handleConfirmJuiceFlavor = (customizedProduct) => {
+    if (editingCartItem) {
+      setCart((prev) =>
+        prev.map((it) => (it.id === editingCartItem.id ? { ...customizedProduct, cantidad: editingCartItem.cantidad } : it))
+      );
+      setEditingCartItem(null);
+    } else {
+      setCart((prev) => {
+        const exists = prev.find((item) => item.id === customizedProduct.id);
+        if (exists) {
+          return prev.map((item) =>
+            item.id === customizedProduct.id ? { ...item, cantidad: item.cantidad + 1 } : item
+          );
+        }
+        return [...prev, { ...customizedProduct, cantidad: 1, completado: false }];
+      });
+    }
+  };
 
   useEffect(() => {
     if (categoriesList.length > 0 && !categoriesList.includes(activeCategory)) {
@@ -344,7 +391,7 @@ export default function OrderDrawer({
                 return (
                   <div
                     key={product.id}
-                    onClick={() => handleAddToCart(product)}
+                    onClick={() => handleProductClick(product)}
                     style={{
                       backgroundColor: quantityInCart > 0 ? '#422515' : '#341e11',
                       border: quantityInCart > 0 ? '2px solid #e27329' : '1.5px solid #52301c',
@@ -401,7 +448,7 @@ export default function OrderDrawer({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleAddToCart(product);
+                          handleProductClick(product);
                         }}
                         style={{
                           backgroundColor: '#e27329',
@@ -623,6 +670,35 @@ export default function OrderDrawer({
                       </span>
                     </div>
 
+                    {(item.sabor || item.nota) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        {item.sabor && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenFlavorForEdit(item)}
+                            title="Haz clic para modificar el sabor"
+                            style={{
+                              backgroundColor: 'rgba(255, 204, 0, 0.15)',
+                              border: '1px solid #ffcc00',
+                              color: '#ffcc00',
+                              fontSize: '0.72rem',
+                              fontWeight: '800',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            🥤 Sabor: {item.sabor} ✏️
+                          </button>
+                        )}
+                        {item.nota && item.nota !== `Sabor: ${item.sabor}` && (
+                          <span style={{ fontSize: '0.72rem', color: '#c4a48c', fontStyle: 'italic' }}>
+                            "{item.nota}"
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.75rem', color: '#c4a48c' }}>
                         {formatCurrency(item.price)} c/u
@@ -754,6 +830,20 @@ export default function OrderDrawer({
           </div>
         </div>
       </div>
+
+      {/* Modal de Selección y Personalización de Sabores de Jugo */}
+      <JuiceFlavorModal
+        isOpen={isJuiceModalOpen}
+        onClose={() => {
+          setIsJuiceModalOpen(false);
+          setEditingCartItem(null);
+        }}
+        product={juiceModalProduct}
+        initialFlavor={editingCartItem?.sabor || ''}
+        initialBase={editingCartItem?.base || ''}
+        initialNote={editingCartItem?.nota || ''}
+        onConfirmFlavor={handleConfirmJuiceFlavor}
+      />
     </div>
   );
 }

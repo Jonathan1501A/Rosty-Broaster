@@ -5,9 +5,11 @@ import {
   Smartphone, 
   Receipt, 
   CheckCircle2, 
-  X 
+  X,
+  Printer
 } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
+import ComandaPrintModal from './ComandaPrintModal.jsx';
 
 export default function CheckoutModal({ 
   isOpen, 
@@ -15,7 +17,8 @@ export default function CheckoutModal({
   mesaNumero, 
   items = [], 
   onConfirmCloseTable,
-  user 
+  user,
+  tenant
 }) {
   const total = items.reduce((sum, item) => sum + item.price * item.cantidad, 0);
 
@@ -24,6 +27,7 @@ export default function CheckoutModal({
   const [customerName, setCustomerName] = useState('Cliente Salón');
   const [customerDoc, setCustomerDoc] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -330,6 +334,23 @@ export default function CheckoutModal({
 
           <button
             type="button"
+            onClick={() => setIsPrintModalOpen(true)}
+            style={{
+              backgroundColor: '#2b180d',
+              border: '1.5px solid #ffcc00',
+              color: '#ffcc00',
+              padding: '10px 16px',
+              fontWeight: '800',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Printer size={16} /> Imprimir Pre-Factura
+          </button>
+
+          <button
+            type="button"
             disabled={isProcessing}
             onClick={handleSubmit}
             style={{
@@ -351,6 +372,26 @@ export default function CheckoutModal({
           </button>
         </div>
       </div>
+
+      {/* Modal de Impresión Térmica de Pre-Factura */}
+      <ComandaPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        order={{
+          id: `FAC-MESA-${mesaNumero}`,
+          tipo: 'dine_in',
+          mesaNumero,
+          cliente: customerName || 'Salón',
+          datosExtra: customerDoc ? `NIT/CC: ${customerDoc}` : '',
+          items,
+          total,
+          metodoPago: paymentMethod,
+          montoRecibido: paymentMethod === 'efectivo' ? cashGiven : total,
+          cambio: change,
+          atendidoPor: user?.name || 'Mesero Salón'
+        }}
+        tenant={tenant}
+      />
     </div>
   );
 }

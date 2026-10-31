@@ -18,6 +18,7 @@ import {
   User
 } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
+import ComandaPrintModal from './ComandaPrintModal.jsx';
 
 export default function TakeoutView({
   orders = [],
@@ -903,99 +904,13 @@ export default function TakeoutView({
       )}
 
       {/* MODAL DE TICKET / COMPROBANTE DE PAGO */}
-      {ticketOrder && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)',
-            backdropFilter: 'blur(5px)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-          }}
-          onClick={() => setTicketOrder(null)}
-        >
-          <div
-            className="animate-fade-in"
-            style={{
-              width: '100%',
-              maxWidth: '380px',
-              backgroundColor: '#ffffff',
-              color: '#000000',
-              borderRadius: '16px',
-              padding: '24px',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.9)',
-              fontFamily: 'monospace'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ textAlign: 'center', borderBottom: '2px dashed #000', paddingBottom: '12px', marginBottom: '12px' }}>
-              <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: '900' }}>{tenant?.nombre || 'ROSTY BROASTER'}</h2>
-              <div style={{ fontSize: '0.8rem', color: '#444' }}>{tenant?.direccion || 'Calle Principal'}</div>
-              <div style={{ fontSize: '0.8rem', color: '#444' }}>Tel: {tenant?.telefono || '3000000000'}</div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 'bold', marginTop: '6px' }}>TICKET DE VENTA (PARA LLEVAR)</div>
-              <div style={{ fontSize: '0.75rem', color: '#555' }}>Orden: #{ticketOrder.id}</div>
-              <div style={{ fontSize: '0.75rem', color: '#555' }}>Fecha: {new Date(ticketOrder.createdAt).toLocaleString('es-CO')}</div>
-              <div style={{ fontSize: '0.75rem', color: '#555' }}>Cliente: {ticketOrder.cliente || 'Barra'}</div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85rem', borderBottom: '2px dashed #000', paddingBottom: '12px', marginBottom: '12px' }}>
-              {(ticketOrder.items || []).map((it, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{it.cantidad}x {it.name}</span>
-                  <span>{formatCurrency(it.price * it.cantidad)}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: '900', marginBottom: '12px' }}>
-              <span>TOTAL:</span>
-              <span>{formatCurrency(ticketOrder.total)}</span>
-            </div>
-
-            <div style={{ fontSize: '0.8rem', marginBottom: '16px', textAlign: 'center', color: '#333' }}>
-              Método de pago: <strong>{(ticketOrder.metodoPago || 'efectivo').toUpperCase()}</strong>
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                style={{
-                  flex: 1,
-                  backgroundColor: '#000',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                Imprimir
-              </button>
-              <button
-                type="button"
-                onClick={() => setTicketOrder(null)}
-                style={{
-                  backgroundColor: '#e5e7eb',
-                  color: '#000',
-                  border: 'none',
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ComandaPrintModal
+        isOpen={Boolean(ticketOrder)}
+        onClose={() => setTicketOrder(null)}
+        order={ticketOrder}
+        tenant={tenant}
+        user={user}
+      />
     </div>
   );
 }

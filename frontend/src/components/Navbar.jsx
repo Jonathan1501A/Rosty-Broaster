@@ -16,7 +16,8 @@ import {
   Building2,
   Bike,
   TrendingDown,
-  ShoppingBag
+  ShoppingBag,
+  Bell
 } from 'lucide-react';
 import { toggleSound, getSoundEnabled } from '../services/sound.js';
 
@@ -35,7 +36,9 @@ export default function Navbar({
   isConnected,
   pendingOrdersCount = 0,
   pendingDeliveriesCount = 0,
-  pendingTakeoutsCount = 0
+  pendingTakeoutsCount = 0,
+  onOpenNotifications,
+  unreadNotificationsCount = 0
 }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [soundOn, setSoundOn] = useState(() => getSoundEnabled());
@@ -555,6 +558,47 @@ export default function Navbar({
           }}
         >
           {soundOn ? <Volume2 size={16} /> : <VolumeX size={16} />}
+        </button>
+
+        {/* Notificaciones Permanentes de Administración */}
+        <button
+          onClick={onOpenNotifications}
+          title={unreadNotificationsCount > 0 ? `${unreadNotificationsCount} avisos nuevos de administración` : 'Avisos y comunicados oficiales'}
+          style={{
+            position: 'relative',
+            backgroundColor: unreadNotificationsCount > 0 ? 'rgba(226, 115, 41, 0.25)' : '#2b180d',
+            color: unreadNotificationsCount > 0 ? '#ffcc00' : '#c4a48c',
+            border: unreadNotificationsCount > 0 ? '1.5px solid #ffcc00' : '1px solid #5c351e',
+            padding: '8px',
+            borderRadius: '10px',
+            cursor: 'pointer'
+          }}
+        >
+          <Bell size={16} />
+          {unreadNotificationsCount > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '-5px',
+                right: '-5px',
+                backgroundColor: '#c62828',
+                color: '#fff',
+                fontSize: '0.65rem',
+                fontWeight: '900',
+                minWidth: '18px',
+                height: '18px',
+                padding: '0 4px',
+                borderRadius: '999px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1.5px solid #1f1109',
+                boxShadow: '0 0 8px rgba(198, 40, 40, 0.8)'
+              }}
+            >
+              {unreadNotificationsCount}
+            </span>
+          )}
         </button>
 
         {/* Normas & Privacidad Button */}

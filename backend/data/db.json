@@ -608,7 +608,18 @@
           "telefono": ""
         }
       ],
-      "expenses": []
+      "expenses": [],
+      "notifications": [
+        {
+          "id": "NOTIF-INICIAL",
+          "titulo": "📢 Comunicado Oficial de Administración General",
+          "mensaje": "¡Bienvenidos al sistema operativo Rosty Broaster! Todas las notificaciones y directrices de la administración general quedarán guardadas permanentemente en este panel para consulta del personal.",
+          "prioridad": "normal",
+          "creadoPor": "Administración General",
+          "fecha": "2026-10-31T12:39:22.287Z",
+          "leidoPor": []
+        }
+      ]
     },
     {
       "id": "pizzeria-napoles",
@@ -811,7 +822,18 @@
           "telefono": ""
         }
       ],
-      "expenses": []
+      "expenses": [],
+      "notifications": [
+        {
+          "id": "NOTIF-INICIAL",
+          "titulo": "📢 Comunicado Oficial de Administración General",
+          "mensaje": "¡Bienvenidos al sistema operativo Rosty Broaster! Todas las notificaciones y directrices de la administración general quedarán guardadas permanentemente en este panel para consulta del personal.",
+          "prioridad": "normal",
+          "creadoPor": "Administración General",
+          "fecha": "2026-10-31T12:39:22.294Z",
+          "leidoPor": []
+        }
+      ]
     }
   ],
   "users": [
