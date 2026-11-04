@@ -400,6 +400,18 @@ export const api = {
     return data.closure;
   },
 
+  syncClosures: async (closures, tenantId) => {
+    const targetTenant = tenantId || getActiveTenantId();
+    const res = await fetch(`${API_URL}/api/stats/sync-closures`, {
+      method: 'POST',
+      headers: getHeaders(targetTenant),
+      body: JSON.stringify({ closures })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al sincronizar cierres con el servidor');
+    return data.closures;
+  },
+
   // Estado del servidor y normativas
   getHealth: async () => {
     const res = await fetch(`${API_URL}/api/health`);

@@ -1351,6 +1351,30 @@ class Store {
     return closures.find((c) => c.id === closureId) || null;
   }
 
+  syncClosures(tenantId = 'rosty-broaster', closuresList = []) {
+    const tenant = this.getTenant(tenantId);
+    if (!tenant) return [];
+    if (!Array.isArray(tenant.closures)) tenant.closures = [];
+
+    let addedCount = 0;
+    for (const c of closuresList) {
+      if (!c || !c.id) continue;
+      const exists = tenant.closures.some((existing) => existing.id === c.id);
+      if (!exists) {
+        tenant.closures.push(c);
+        addedCount++;
+      }
+    }
+
+    if (addedCount > 0) {
+      tenant.closures.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+      this.persist();
+      console.log(`🛡️ [Vault Auto-Sync]: Se recuperaron y sincronizaron ${addedCount} cierres Z desde la bóveda local.`);
+    }
+
+    return this.getClosures(tenantId);
+  }
+
   updateClosure(tenantId = 'rosty-broaster', closureId, data) {
     const tenant = this.getTenant(tenantId);
     if (!tenant || !Array.isArray(tenant.closures)) return null;

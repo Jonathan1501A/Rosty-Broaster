@@ -221,7 +221,29 @@ export default function App() {
 
       if (fetchedTables && fetchedTables.length > 0) setTables(fetchedTables);
       if (fetchedOrders && fetchedOrders.length > 0) setOrders(fetchedOrders);
-      if (fetchedStats) setStats(fetchedStats);
+      if (fetchedStats) {
+        // Bóveda de protección anti-pérdida de cierres Z
+        try {
+          const rawVault = localStorage.getItem(`rosty_vault_closures_${currentTenantId}`);
+          const vaultClosures = rawVault ? JSON.parse(rawVault) : [];
+          const serverClosures = fetchedStats.cierresAnteriores || [];
+
+          // Si la bóveda local tiene cierres que el servidor no tiene (ej: reinicio de Render), auto-restaurar
+          const missingInServer = vaultClosures.filter(vc => !serverClosures.some(sc => sc.id === vc.id));
+          if (missingInServer.length > 0) {
+            console.log(`🛡️ [Vault Protection]: Auto-recuperando ${missingInServer.length} cierres Z en el servidor...`);
+            api.syncClosures(vaultClosures, currentTenantId).catch(() => {});
+            fetchedStats.cierresAnteriores = [
+              ...serverClosures,
+              ...missingInServer
+            ].sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+          } else if (serverClosures.length > 0) {
+            localStorage.setItem(`rosty_vault_closures_${currentTenantId}`, JSON.stringify(serverClosures));
+          }
+        } catch (e) {}
+
+        setStats(fetchedStats);
+      }
       if (fetchedNotifs && fetchedNotifs.length > 0) setNotifications(fetchedNotifs);
       if (fetchedTenant) {
         setTenant(fetchedTenant);
@@ -413,6 +435,15 @@ export default function App() {
   const handleConfirmCloseCash = async (closureData) => {
     try {
       const closure = await api.closeCashRegister(currentTenantId, closureData);
+      
+      // Respaldar inmediatamente en la Bóveda Local del Navegador
+      try {
+        const rawVault = localStorage.getItem(`rosty_vault_closures_${currentTenantId}`);
+        const currentVault = rawVault ? JSON.parse(rawVault) : [];
+        const updatedVault = [closure, ...currentVault.filter(c => c.id !== closure.id)];
+        localStorage.setItem(`rosty_vault_closures_${currentTenantId}`, JSON.stringify(updatedVault));
+      } catch (e) {}
+
       setOrders([]);
       setStats({
         totalVendido: 0,

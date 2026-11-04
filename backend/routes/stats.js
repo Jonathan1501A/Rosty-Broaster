@@ -51,4 +51,18 @@ router.put('/closures/:id', (req, res) => {
   res.json({ message: 'Cierre actualizado con éxito.', closure: updated });
 });
 
+/**
+ * @route POST /api/stats/sync-closures
+ * @desc Sincronizar cierres desde la bóveda local del cliente (Protección anti-pérdida)
+ */
+router.post('/sync-closures', (req, res) => {
+  const tenantId = getTenantId(req);
+  const { closures } = req.body;
+  if (!Array.isArray(closures)) {
+    return res.status(400).json({ error: 'Lista de cierres inválida.' });
+  }
+  const updated = store.syncClosures(tenantId, closures);
+  res.json({ message: 'Cierres sincronizados con la bóveda.', closures: updated });
+});
+
 export default router;
