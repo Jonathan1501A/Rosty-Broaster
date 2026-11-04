@@ -146,10 +146,120 @@ class Store {
   constructor() {
     this.tenants = [];
     this.users = [];
+    this.isFirebaseConnected = false;
+    this.lastFirebaseSync = null;
+    this.isPostgresConnected = false;
+    this.lastPostgresSync = null;
     this.init();
-    this.initDbSync().catch((err) => {
-      console.warn('⚠️ [PostgreSQL Sync Boot Error]:', err.message);
+    this.initCloudSync().catch((err) => {
+      console.warn('⚠️ [Cloud Sync Boot Error]:', err.message);
     });
+  }
+
+  getFirebaseUrl() {
+    let url = process.env.FIREBASE_DATABASE_URL;
+    if (!url) return null;
+    url = url.trim().replace(/\/$/, '');
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    const secret = process.env.FIREBASE_SECRET || process.env.FIREBASE_AUTH_KEY || '';
+    const authQuery = secret ? `?auth=${encodeURIComponent(secret)}` : '';
+    return `${url}/app_store.json${authQuery}`;
+  }
+
+  async initFirebaseSync() {
+    const firebaseUrl = this.getFirebaseUrl();
+    if (!firebaseUrl) return false;
+
+    try {
+      console.log('🔥 [Firebase RTDB]: Conectando a Firebase Realtime Database...');
+      const res = await fetch(firebaseUrl, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(8000)
+      });
+
+      if (!res.ok) {
+        console.warn(`⚠️ [Firebase RTDB]: Error al consultar Firebase (${res.status} ${res.statusText})`);
+        return false;
+      }
+
+      const cloudData = await res.json();
+      if (cloudData && Array.isArray(cloudData.tenants) && cloudData.tenants.length > 0) {
+        this.tenants = cloudData.tenants;
+        this.users = cloudData.users || [];
+        for (const t of this.tenants) {
+          if (!Array.isArray(t.expenses)) t.expenses = [];
+          if (!Array.isArray(t.closures)) t.closures = [];
+          if (!Array.isArray(t.orders)) t.orders = [];
+          if (!Array.isArray(t.salesHistory)) t.salesHistory = [];
+          if (!Array.isArray(t.notifications)) t.notifications = [];
+          if (!Array.isArray(t.domiciliarios)) t.domiciliarios = [];
+        }
+        this.ensureSuperadmin();
+        this.ensureUniqueUsernames();
+        try {
+          fs.writeFileSync(DB_FILE, JSON.stringify({ tenants: this.tenants, users: this.users }, null, 2), 'utf-8');
+        } catch (_) {}
+        this.isFirebaseConnected = true;
+        this.lastFirebaseSync = new Date().toISOString();
+        console.log(`🔥 [Firebase RTDB]: Sincronizado exitosamente desde la nube (${this.tenants.length} restaurantes, ${this.users.length} usuarios).`);
+        return true;
+      }
+
+      // Si Firebase está vacío en el primer arranque, guardar estado local en Firebase
+      await this.saveToFirebase();
+      this.isFirebaseConnected = true;
+      this.lastFirebaseSync = new Date().toISOString();
+      console.log('🔥 [Firebase RTDB]: Respaldo inicial guardado exitosamente en Firebase.');
+      return true;
+    } catch (err) {
+      console.warn('⚠️ [Firebase RTDB Sync]:', err.message);
+      this.isFirebaseConnected = false;
+      return false;
+    }
+  }
+
+  async saveToFirebase() {
+    const firebaseUrl = this.getFirebaseUrl();
+    if (!firebaseUrl) return;
+
+    try {
+      const payload = JSON.stringify({
+        tenants: this.tenants,
+        users: this.users,
+        updatedAt: new Date().toISOString()
+      });
+
+      const res = await fetch(firebaseUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        signal: AbortSignal.timeout(7000)
+      });
+
+      if (res.ok) {
+        this.isFirebaseConnected = true;
+        this.lastFirebaseSync = new Date().toISOString();
+      }
+    } catch (err) {
+      console.warn('⚠️ [Firebase Save Warning]:', err.message);
+    }
+  }
+
+  async initCloudSync() {
+    // 1. Prioridad: Firebase Realtime Database
+    if (process.env.FIREBASE_DATABASE_URL) {
+      const synced = await this.initFirebaseSync();
+      if (synced) return;
+    }
+
+    // 2. Segunda opción: PostgreSQL
+    if (pool) {
+      await this.initDbSync().catch((err) => {
+        console.warn('⚠️ [PostgreSQL Sync Boot Error]:', err.message);
+      });
+    }
   }
 
   async initDbSync() {
@@ -181,6 +291,8 @@ class Store {
           try {
             fs.writeFileSync(DB_FILE, JSON.stringify({ tenants: this.tenants, users: this.users }, null, 2), 'utf-8');
           } catch (_) {}
+          this.isPostgresConnected = true;
+          this.lastPostgresSync = new Date().toISOString();
           console.log(`☁️ [PostgreSQL]: Datos persistentes sincronizados desde la nube (${this.tenants.length} restaurantes, ${this.users.length} usuarios).`);
           return;
         }
@@ -188,9 +300,12 @@ class Store {
 
       // Si la tabla en la nube es nueva, respaldar el estado local actual
       await this.saveToDb();
+      this.isPostgresConnected = true;
+      this.lastPostgresSync = new Date().toISOString();
       console.log('☁️ [PostgreSQL]: Respaldo inicial guardado exitosamente en la nube.');
     } catch (err) {
       console.warn('⚠️ [PostgreSQL Sync]:', err.message);
+      this.isPostgresConnected = false;
     }
   }
 
@@ -207,8 +322,11 @@ class Store {
         ON CONFLICT (id) DO UPDATE
         SET data = EXCLUDED.data, updated_at = NOW();
       `, [payload]);
+      this.isPostgresConnected = true;
+      this.lastPostgresSync = new Date().toISOString();
     } catch (err) {
       console.warn('⚠️ [PostgreSQL Backup]:', err.message);
+      this.isPostgresConnected = false;
     }
   }
 
@@ -363,8 +481,72 @@ class Store {
     } catch (e) {
       console.error('Error al persistir base de datos a disco:', e.message);
     }
+    // Sincronizar en Firebase si está configurado
+    this.saveToFirebase().catch(() => {});
     // Sincronizar en PostgreSQL si hay conexión activa
     this.saveToDb().catch(() => {});
+  }
+
+  getCloudStatus() {
+    return {
+      firebase: {
+        configured: !!process.env.FIREBASE_DATABASE_URL,
+        url: process.env.FIREBASE_DATABASE_URL ? (process.env.FIREBASE_DATABASE_URL.replace(/^https?:\/\//, '').split('/')[0]) : null,
+        connected: this.isFirebaseConnected || false,
+        lastSync: this.lastFirebaseSync || null
+      },
+      postgres: {
+        configured: !!pool,
+        connected: this.isPostgresConnected || false,
+        lastSync: this.lastPostgresSync || null
+      },
+      localDisk: {
+        path: 'backend/data/db.json',
+        tenantsCount: this.tenants.length,
+        usersCount: this.users.length,
+        lastSaved: new Date().toISOString()
+      }
+    };
+  }
+
+  getBackupData() {
+    return {
+      appName: 'ROSTY Broaster POS & KDS Cloud Backup',
+      exportedAt: new Date().toISOString(),
+      tenants: this.tenants,
+      users: this.users
+    };
+  }
+
+  restoreFromBackup(backupData) {
+    if (!backupData || !Array.isArray(backupData.tenants) || backupData.tenants.length === 0) {
+      throw new Error('El archivo de respaldo no contiene restaurantes o formato válido.');
+    }
+
+    this.tenants = backupData.tenants;
+    if (Array.isArray(backupData.users) && backupData.users.length > 0) {
+      this.users = backupData.users;
+    }
+
+    for (const t of this.tenants) {
+      if (!Array.isArray(t.expenses)) t.expenses = [];
+      if (!Array.isArray(t.closures)) t.closures = [];
+      if (!Array.isArray(t.orders)) t.orders = [];
+      if (!Array.isArray(t.salesHistory)) t.salesHistory = [];
+      if (!Array.isArray(t.notifications)) t.notifications = [];
+      if (!Array.isArray(t.domiciliarios)) t.domiciliarios = [];
+    }
+
+    this.ensureSuperadmin();
+    this.ensureUniqueUsernames();
+    this.persist();
+
+    return {
+      success: true,
+      tenantsCount: this.tenants.length,
+      usersCount: this.users.length,
+      timestamp: new Date().toISOString()
+    };
   }
 
   // --- GESTIÓN DE EMPRESAS (TENANTS) ---

@@ -5,17 +5,81 @@ import { store } from '../data/store.js';
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'rosty_secret_dev_key_2026_local';
 
-const isSuperadmin = (req) => {
+const getRequester = (req) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-  if (!token) return false;
+  if (!token) return null;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return decoded && decoded.role === 'superadmin';
+    return jwt.verify(token, JWT_SECRET);
   } catch {
-    return false;
+    return null;
   }
 };
+
+const isSuperadmin = (req) => {
+  const user = getRequester(req);
+  return user && user.role === 'superadmin';
+};
+
+const isAdminOrSuperadmin = (req) => {
+  const user = getRequester(req);
+  return user && (user.role === 'admin' || user.role === 'superadmin');
+};
+
+/**
+ * @route GET /api/tenants/backup/status
+ * @desc Estado de conexión de base de datos en la nube (Firebase, Postgres, Disco)
+ */
+router.get('/backup/status', (req, res) => {
+  res.json({
+    status: 'ok',
+    cloud: store.getCloudStatus()
+  });
+});
+
+/**
+ * @route GET /api/tenants/backup/export
+ * @desc Descargar copia de seguridad completa del sistema en JSON
+ */
+router.get('/backup/export', (req, res) => {
+  if (!isAdminOrSuperadmin(req)) {
+    return res.status(403).json({ error: 'Acceso restringido: Se requiere rol de Administrador.' });
+  }
+
+  const backupData = store.getBackupData();
+  const filename = `rosty_backup_${new Date().toISOString().slice(0, 10)}.json`;
+
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(JSON.stringify(backupData, null, 2));
+});
+
+/**
+ * @route POST /api/tenants/backup/restore
+ * @desc Restaurar datos del sistema desde un archivo JSON de respaldo
+ */
+router.post('/backup/restore', (req, res) => {
+  if (!isAdminOrSuperadmin(req)) {
+    return res.status(403).json({ error: 'Acceso restringido: Se requiere rol de Administrador.' });
+  }
+
+  try {
+    const backupData = req.body;
+    const result = store.restoreFromBackup(backupData);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('tenants:updated', store.getTenants());
+    }
+
+    res.json({
+      message: 'Base de datos restaurada exitosamente.',
+      result
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Error al restaurar copia de seguridad.' });
+  }
+});
 
 /**
  * @route GET /api/tenants

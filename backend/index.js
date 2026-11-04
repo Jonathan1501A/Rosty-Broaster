@@ -57,7 +57,7 @@ app.use(helmetMiddleware);
 app.use(securityHeadersMiddleware);
 app.use(getCorsMiddleware());
 app.use(globalLimiter);
-app.use(express.json({ limit: '10kb' })); // Prevenir ataques por payload grande
+app.use(express.json({ limit: '10mb' })); // Soporte seguro para backups y datos del sistema
 
 // 2. Ruta de Salud y Cumplimiento Normativo
 app.get('/api/health', (req, res) => {

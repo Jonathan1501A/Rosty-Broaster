@@ -449,9 +449,111 @@
           "pedidoActual": []
         }
       ],
-      "orders": [],
+      "orders": [
+        {
+          "id": "ORD-0585",
+          "empresaId": "rosty-broaster",
+          "tipo": "dine_in",
+          "destino": "Mesa 3",
+          "cliente": "Salón",
+          "datosExtra": "Salón",
+          "items": [
+            {
+              "id": 1793456766028,
+              "name": "Promo Familiar",
+              "price": 75000,
+              "cantidad": 1,
+              "completado": false
+            }
+          ],
+          "total": 75000,
+          "estado": "En preparación",
+          "cobrado": false,
+          "mesaNumero": 3,
+          "domiciliarioId": "dom-1",
+          "domiciliarioNombre": "Domiciliario 1",
+          "domiciliarioTelefono": "3118303263",
+          "createdAt": "2026-10-31T18:13:11.675Z",
+          "updatedAt": "2026-10-31T18:14:43.683Z"
+        }
+      ],
       "salesHistory": [],
       "closures": [
+        {
+          "id": "CORTE-2766",
+          "empresaId": "rosty-broaster",
+          "fecha": "2026-11-04T20:15:22.766Z",
+          "fechaFormateada": "miércoles, 4 de noviembre de 2026, 8:15 p. m.",
+          "cerradoPor": "Administración & Auditoría",
+          "totalVendido": 122000,
+          "totalComandas": 4,
+          "porMetodoPago": {
+            "efectivo": 122000,
+            "nequi": 0,
+            "daviplata": 0,
+            "tarjeta": 0
+          },
+          "baseCaja": 50000,
+          "totalGastos": 0,
+          "totalGastosEfectivo": 0,
+          "totalGastosTransferencia": 0,
+          "balanceNeto": 122000,
+          "efectivoEsperado": 172000,
+          "efectivoReal": 172000,
+          "diferencia": 0,
+          "notas": "",
+          "comprobantes": [
+            {
+              "id": "REC-4465-314",
+              "ordenId": "ORD-5297",
+              "destino": "casa25",
+              "cliente": "calle4#2-205",
+              "total": 45000,
+              "metodoPago": "efectivo",
+              "montoRecibido": 45000,
+              "cambio": 0,
+              "despachadoPor": "Administración & Auditoría",
+              "timestamp": "2026-11-04T20:15:14.465Z"
+            },
+            {
+              "id": "REC-8220-544",
+              "ordenId": "ORD-2182",
+              "destino": "Retiro en Barra",
+              "cliente": "Cliente Barra",
+              "total": 21000,
+              "metodoPago": "efectivo",
+              "montoRecibido": 73000,
+              "cambio": 52000,
+              "despachadoPor": "Administración & Auditoría",
+              "timestamp": "2026-11-04T20:15:08.220Z"
+            },
+            {
+              "id": "REC-8220-577",
+              "ordenId": "ORD-2324",
+              "destino": "Retiro en Barra",
+              "cliente": "Cliente Barra",
+              "total": 52000,
+              "metodoPago": "efectivo",
+              "montoRecibido": 73000,
+              "cambio": 21000,
+              "despachadoPor": "Administración & Auditoría",
+              "timestamp": "2026-11-04T20:15:08.220Z"
+            },
+            {
+              "id": "REC-3135-144",
+              "ordenId": "ORD-5433",
+              "destino": "Dirección de Entrega",
+              "cliente": "Cliente Domicilio",
+              "total": 4000,
+              "metodoPago": "efectivo",
+              "montoRecibido": 4000,
+              "cambio": 0,
+              "despachadoPor": "Administración & Auditoría",
+              "timestamp": "2026-10-31T14:28:53.135Z"
+            }
+          ],
+          "gastosRegistrados": []
+        },
         {
           "id": "CORTE-2810",
           "empresaId": "rosty-broaster",
@@ -593,7 +695,12 @@
               "despachadoPor": "waiter",
               "timestamp": "2026-10-10T21:53:12.244Z"
             }
-          ]
+          ],
+          "totalGastos": 0,
+          "totalGastosEfectivo": 0,
+          "totalGastosTransferencia": 0,
+          "balanceNeto": 135000,
+          "gastosRegistrados": []
         }
       ],
       "domiciliarios": [
@@ -617,7 +724,9 @@
           "prioridad": "normal",
           "creadoPor": "Administración General",
           "fecha": "2026-10-31T12:39:22.287Z",
-          "leidoPor": []
+          "leidoPor": [
+            "u-rosty-admin"
+          ]
         }
       ]
     },

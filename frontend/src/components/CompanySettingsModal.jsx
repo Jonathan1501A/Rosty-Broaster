@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Store, 
@@ -11,8 +11,17 @@ import {
   MessageSquare,
   Bike,
   Plus,
-  Trash2
+  Trash2,
+  Cloud,
+  Download,
+  Upload,
+  Database,
+  RefreshCw,
+  AlertTriangle,
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
+import { api } from '../services/api.js';
 
 export default function CompanySettingsModal({ 
   isOpen, 
@@ -48,6 +57,66 @@ export default function CompanySettingsModal({
 
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Estados de Base de Datos & Nube
+  const [cloudStatus, setCloudStatus] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreStatus, setRestoreStatus] = useState(null);
+  const [showFirebaseGuide, setShowFirebaseGuide] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      api.getCloudStatus()
+        .then((data) => setCloudStatus(data))
+        .catch(() => {});
+    }
+  }, [isOpen]);
+
+  const handleExportBackup = async () => {
+    try {
+      setIsExporting(true);
+      await api.exportBackup();
+    } catch (err) {
+      alert(err.message || 'Error al exportar copia de seguridad');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleRestoreFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm(`¿Estás seguro de que deseas restaurar los datos desde "${file.name}"? Esto sincronizará todos los restaurantes, cierres de caja y pedidos.`)) {
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      setIsRestoring(true);
+      setRestoreStatus(null);
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+
+      await api.restoreBackup(parsed);
+      setRestoreStatus({
+        type: 'success',
+        message: '¡Copia de seguridad restaurada con éxito! Recargando la aplicación...'
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      setRestoreStatus({
+        type: 'error',
+        message: err.message || 'Error al restaurar archivo. Asegúrate de que sea un archivo JSON válido.'
+      });
+    } finally {
+      setIsRestoring(false);
+      e.target.value = '';
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -475,6 +544,147 @@ export default function CompanySettingsModal({
               >
                 <Plus size={16} /> Agregar
               </button>
+            </div>
+          </div>
+
+          {/* 4. Respaldo & Base de Datos en la Nube */}
+          <div style={{ backgroundColor: '#21130a', border: '2px solid #e27329', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1.5px solid #3d2314', paddingBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffcc00', fontWeight: '900', fontSize: '0.9rem', textTransform: 'uppercase' }}>
+                <Database size={20} /> Persistencia & Base de Datos Cloud
+              </div>
+              <span style={{ 
+                fontSize: '0.75rem', 
+                padding: '4px 10px', 
+                borderRadius: '20px', 
+                fontWeight: '800', 
+                backgroundColor: cloudStatus?.firebase?.configured ? 'rgba(74, 222, 128, 0.15)' : cloudStatus?.postgres?.configured ? 'rgba(74, 222, 128, 0.15)' : 'rgba(251, 191, 36, 0.15)', 
+                color: cloudStatus?.firebase?.configured || cloudStatus?.postgres?.configured ? '#4ade80' : '#fbbf24', 
+                border: `1px solid ${cloudStatus?.firebase?.configured || cloudStatus?.postgres?.configured ? '#4ade80' : '#fbbf24'}` 
+              }}>
+                {cloudStatus?.firebase?.configured ? '🟢 Firebase Cloud Activo' : cloudStatus?.postgres?.configured ? '🟢 PostgreSQL Activo' : '🟡 Almacenamiento Local Temporal'}
+              </span>
+            </div>
+
+            <p style={{ fontSize: '0.825rem', color: '#fbeee0', margin: 0, lineHeight: 1.5 }}>
+              {cloudStatus?.firebase?.configured ? (
+                <>
+                  <strong style={{ color: '#4ade80' }}>¡Tus datos están protegidos en la nube!</strong> Cada pedido, corte de caja, gasto y configuración se sincroniza automáticamente en Google Firebase. Nunca se perderán al desplegar cambios de código o reiniciar el servidor.
+                </>
+              ) : cloudStatus?.postgres?.configured ? (
+                <>
+                  <strong style={{ color: '#4ade80' }}>¡PostgreSQL Conectado!</strong> La base de datos persistente remota está activa.
+                </>
+              ) : (
+                <>
+                  Actualmente el sistema guarda los datos en el disco local temporal del servidor. Para que <strong>nunca se borre nada</strong> al actualizar el código en Render, conecta Google Firebase Realtime Database gratis (recomendado) o descarga una copia de respaldo periódicamente.
+                </>
+              )}
+            </p>
+
+            {/* Botones de Respaldo */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={handleExportBackup}
+                disabled={isExporting}
+                style={{
+                  backgroundColor: '#3d2314',
+                  color: '#ffcc00',
+                  border: '1.5px solid #ffcc00',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  fontWeight: '800',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: isExporting ? 'wait' : 'pointer'
+                }}
+              >
+                <Download size={18} />
+                {isExporting ? 'Descargando...' : 'Descargar Respaldo JSON'}
+              </button>
+
+              <label
+                style={{
+                  backgroundColor: '#2b180d',
+                  color: '#4ade80',
+                  border: '1.5px solid #4ade80',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  fontWeight: '800',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: isRestoring ? 'wait' : 'pointer'
+                }}
+              >
+                <Upload size={18} />
+                {isRestoring ? 'Restaurando...' : 'Restaurar desde JSON'}
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleRestoreFile}
+                  disabled={isRestoring}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+
+            {restoreStatus && (
+              <div style={{
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: '700',
+                backgroundColor: restoreStatus.type === 'success' ? 'rgba(74, 222, 128, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                color: restoreStatus.type === 'success' ? '#4ade80' : '#f87171',
+                border: `1px solid ${restoreStatus.type === 'success' ? '#4ade80' : '#f87171'}`
+              }}>
+                {restoreStatus.message}
+              </div>
+            )}
+
+            {/* Instrucciones para activar Firebase en 1 minuto */}
+            <div style={{ backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: '10px', border: '1px dashed #5c351e', padding: '12px 14px' }}>
+              <button
+                type="button"
+                onClick={() => setShowFirebaseGuide(!showFirebaseGuide)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#e27329',
+                  fontSize: '0.825rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: 0
+                }}
+              >
+                <Cloud size={16} />
+                {showFirebaseGuide ? '▼ Ocultar instrucciones de Google Firebase' : '▶ ¿Cómo conectar Google Firebase en 1 minuto? (Recomendado)'}
+              </button>
+
+              {showFirebaseGuide && (
+                <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#fbeee0', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div><strong>1.</strong> Entra a <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" style={{ color: '#ffcc00', textDecoration: 'underline' }}>console.firebase.google.com</a> y crea un proyecto gratuito.</div>
+                  <div><strong>2.</strong> En el menú izquierdo ve a <strong>Compilación &gt; Realtime Database</strong> &gt; Crear base de datos &gt; Selecciona <strong>Modo de prueba</strong>.</div>
+                  <div><strong>3.</strong> Copia la URL de tu base de datos (ejemplo: <code>https://tu-proyecto-default-rtdb.firebaseio.com/</code>).</div>
+                  <div><strong>4.</strong> En tu panel de <strong>Render.com</strong> &gt; Tu servicio de Backend &gt; <strong>Environment</strong> &gt; Agrega la variable:
+                    <div style={{ backgroundColor: '#110a05', padding: '6px 10px', borderRadius: '6px', fontFamily: 'monospace', color: '#ffcc00', marginTop: '4px' }}>
+                      Key: FIREBASE_DATABASE_URL<br />
+                      Value: https://tu-proyecto-default-rtdb.firebaseio.com/
+                    </div>
+                  </div>
+                  <div style={{ color: '#4ade80', fontWeight: '700' }}>¡Listo! Al guardar esa variable en Render, el backend conectará automáticamente y guardará todo permanentemente.</div>
+                </div>
+              )}
             </div>
           </div>
 

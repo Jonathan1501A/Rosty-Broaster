@@ -463,5 +463,45 @@ export const api = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al eliminar notificación');
     return data;
+  },
+
+  // Respaldo & Nube (Firebase / PostgreSQL / JSON)
+  getCloudStatus: async () => {
+    const res = await fetch(`${API_URL}/api/tenants/backup/status`, {
+      headers: getHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al obtener estado de nube');
+    return data.cloud;
+  },
+
+  exportBackup: async () => {
+    const res = await fetch(`${API_URL}/api/tenants/backup/export`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al exportar copia de seguridad');
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rosty_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
+  restoreBackup: async (backupData) => {
+    const res = await fetch(`${API_URL}/api/tenants/backup/restore`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(backupData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al restaurar copia de seguridad');
+    return data;
   }
 };
