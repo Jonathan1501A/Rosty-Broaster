@@ -25,6 +25,9 @@ const INITIAL_ROSTY_CONFIG = {
   telefono: '3227801140',
   direccion: 'Calle 5 #10-20',
   whatsappDomiciliario: '3227801140',
+  nit: '901.482.391-4',
+  mensajeFactura: '¡GRACIAS POR SU COMPRA! VUELVA PRONTO',
+  pieFactura: 'Documento de control interno • Software RostyBroaster POS',
   domiciliarios: [
     { id: 'dom-1', nombre: 'Domiciliario 1', telefono: '3227801140' },
     { id: 'dom-2', nombre: 'Domiciliario 2', telefono: '' }
@@ -74,6 +77,9 @@ const INITIAL_PIZZERIA_CONFIG = {
   telefono: '3109876543',
   direccion: 'Carrera 15 #80-10',
   whatsappDomiciliario: '3109876543',
+  nit: '900.852.147-1',
+  mensajeFactura: '¡GRACIAS POR SU VISITA!',
+  pieFactura: 'Documento de control interno • Software RostyBroaster POS',
   domiciliarios: [
     { id: 'dom-1', nombre: 'Domiciliario 1', telefono: '3109876543' },
     { id: 'dom-2', nombre: 'Domiciliario 2', telefono: '' }
@@ -573,6 +579,9 @@ class Store {
       telefono: t.telefono,
       direccion: t.direccion,
       whatsappDomiciliario: t.whatsappDomiciliario,
+      nit: t.nit || '',
+      mensajeFactura: t.mensajeFactura || '',
+      pieFactura: t.pieFactura || '',
       domiciliarios: t.domiciliarios || [],
       estado: t.estado || 'activo',
       admin: this.getTenantAdmin(t.id),
@@ -768,6 +777,9 @@ class Store {
     if (config.telefono !== undefined) tenant.telefono = config.telefono;
     if (config.direccion !== undefined) tenant.direccion = config.direccion;
     if (config.whatsappDomiciliario !== undefined) tenant.whatsappDomiciliario = config.whatsappDomiciliario;
+    if (config.nit !== undefined) tenant.nit = config.nit.trim();
+    if (config.mensajeFactura !== undefined) tenant.mensajeFactura = config.mensajeFactura.trim();
+    if (config.pieFactura !== undefined) tenant.pieFactura = config.pieFactura.trim();
     if (config.domiciliarios !== undefined && Array.isArray(config.domiciliarios)) {
       tenant.domiciliarios = config.domiciliarios;
     }

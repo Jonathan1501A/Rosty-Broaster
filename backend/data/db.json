@@ -12,9 +12,12 @@
         "superficie": "#3d2314"
       },
       "numeroMesas": 14,
-      "telefono": "",
-      "direccion": "",
+      "telefono": "3227801140",
+      "direccion": "Calle 5 #10-20",
       "whatsappDomiciliario": "3118303263",
+      "nit": "901.482.391-4",
+      "mensajeFactura": "¡GRACIAS POR SU COMPRA! VUELVA PRONTO",
+      "pieFactura": "Documento de control interno • Software RostyBroaster POS",
       "menu": {
         "Pollo Broaster 🍗": [
           {
@@ -745,6 +748,9 @@
       "telefono": "3109876543",
       "direccion": "Carrera 15 #80-10",
       "whatsappDomiciliario": "3109876543",
+      "nit": "900.852.147-1",
+      "mensajeFactura": "¡GRACIAS POR SU VISITA!",
+      "pieFactura": "Documento de control interno • Software RostyBroaster POS",
       "menu": {
         "Pizzas Tradicionales 🍕": [
           {

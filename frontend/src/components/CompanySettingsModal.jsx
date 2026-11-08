@@ -19,7 +19,8 @@ import {
   RefreshCw,
   AlertTriangle,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  Printer
 } from 'lucide-react';
 import { api } from '../services/api.js';
 
@@ -36,6 +37,9 @@ export default function CompanySettingsModal({
   const [telefono, setTelefono] = useState(tenant?.telefono || '');
   const [direccion, setDireccion] = useState(tenant?.direccion || '');
   const [whatsappDomiciliario, setWhatsappDomiciliario] = useState(tenant?.whatsappDomiciliario || '');
+  const [nit, setNit] = useState(tenant?.nit || '');
+  const [mensajeFactura, setMensajeFactura] = useState(tenant?.mensajeFactura || '¡GRACIAS POR SU COMPRA! VUELVA PRONTO');
+  const [pieFactura, setPieFactura] = useState(tenant?.pieFactura || 'Documento de control interno • Software RostyBroaster POS');
 
   // Gestión de Domiciliarios (2-3 repartidores)
   const [domiciliarios, setDomiciliarios] = useState(
@@ -67,11 +71,30 @@ export default function CompanySettingsModal({
 
   useEffect(() => {
     if (isOpen) {
+      if (tenant) {
+        setNombre(tenant.nombre || '');
+        setSlogan(tenant.slogan || '');
+        setLogoEmoji(tenant.logoEmoji || '🐔');
+        setNumeroMesas(tenant.numeroMesas || 14);
+        setTelefono(tenant.telefono || '');
+        setDireccion(tenant.direccion || '');
+        setWhatsappDomiciliario(tenant.whatsappDomiciliario || '');
+        setNit(tenant.nit || '');
+        setMensajeFactura(tenant.mensajeFactura || '¡GRACIAS POR SU COMPRA! VUELVA PRONTO');
+        setPieFactura(tenant.pieFactura || 'Documento de control interno • Software RostyBroaster POS');
+        if (tenant.domiciliarios) setDomiciliarios(tenant.domiciliarios);
+        if (tenant.colores) {
+          setPrimario(tenant.colores.primario || '#e27329');
+          setSecundario(tenant.colores.secundario || '#ffcc00');
+          setFondo(tenant.colores.fondo || '#1f1109');
+          setSuperficie(tenant.colores.superficie || '#3d2314');
+        }
+      }
       api.getCloudStatus()
         .then((data) => setCloudStatus(data))
         .catch(() => {});
     }
-  }, [isOpen]);
+  }, [isOpen, tenant]);
 
   const handleExportBackup = async () => {
     try {
@@ -151,6 +174,9 @@ export default function CompanySettingsModal({
         telefono: telefono.trim(),
         direccion: direccion.trim(),
         whatsappDomiciliario: (domiciliarios[0]?.telefono || whatsappDomiciliario || '').trim(),
+        nit: nit.trim(),
+        mensajeFactura: mensajeFactura.trim(),
+        pieFactura: pieFactura.trim(),
         domiciliarios,
         colores: {
           primario,
@@ -547,7 +573,73 @@ export default function CompanySettingsModal({
             </div>
           </div>
 
-          {/* 4. Respaldo & Base de Datos en la Nube */}
+          {/* 5. Facturación e Impresión de Comandas (Línea de 80 mm) */}
+          <div style={{ backgroundColor: '#341e11', border: '1.5px solid #52301c', borderRadius: '16px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffcc00', fontWeight: '900', fontSize: '0.875rem', textTransform: 'uppercase' }}>
+                <Printer size={18} /> Datos de Factura & Impresora Térmica (Línea 80 mm)
+              </div>
+              <span style={{ fontSize: '0.72rem', backgroundColor: 'rgba(255, 204, 0, 0.15)', color: '#ffcc00', padding: '3px 8px', borderRadius: '12px', fontWeight: '800', border: '1px solid #ffcc00' }}>
+                Rollo de 80 mm • POS
+              </span>
+            </div>
+
+            <p style={{ fontSize: '0.78rem', color: '#fbeee0', margin: 0, lineHeight: 1.4 }}>
+              Configura los datos fiscales y mensajes que se imprimirán en las comandas y recibos de caja para modelos de escritorio y comanderas (80 mm).
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: '#fbeee0', marginBottom: '6px', fontWeight: '700' }}>
+                  NIT / RUT / Cédula del Restaurante:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: 901.482.391-4"
+                  value={nit}
+                  onChange={(e) => setNit(e.target.value)}
+                  style={{ width: '100%', fontSize: '0.9rem', fontWeight: '800' }}
+                />
+                <span style={{ fontSize: '0.7rem', color: '#c4a48c', marginTop: '4px', display: 'block' }}>
+                  Aparecerá en el encabezado de cada factura impresa.
+                </span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: '#fbeee0', marginBottom: '6px', fontWeight: '700' }}>
+                  Mensaje al Final de la Factura:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: ¡GRACIAS POR SU COMPRA! VUELVA PRONTO"
+                  value={mensajeFactura}
+                  onChange={(e) => setMensajeFactura(e.target.value)}
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                />
+                <span style={{ fontSize: '0.7rem', color: '#c4a48c', marginTop: '4px', display: 'block' }}>
+                  Texto de despedida o agradecimiento al cliente.
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', color: '#fbeee0', marginBottom: '6px', fontWeight: '700' }}>
+                Pie de Factura / Régimen o Leyenda:
+              </label>
+              <input
+                type="text"
+                placeholder="Ej: Documento de control interno • Software RostyBroaster POS"
+                value={pieFactura}
+                onChange={(e) => setPieFactura(e.target.value)}
+                style={{ width: '100%', fontSize: '0.85rem' }}
+              />
+              <span style={{ fontSize: '0.7rem', color: '#c4a48c', marginTop: '4px', display: 'block' }}>
+                Aviso legal inferior (Régimen no responsable de IVA, resolución o control interno).
+              </span>
+            </div>
+          </div>
+
+          {/* 6. Respaldo & Base de Datos en la Nube */}
           <div style={{ backgroundColor: '#21130a', border: '2px solid #e27329', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1.5px solid #3d2314', paddingBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffcc00', fontWeight: '900', fontSize: '0.9rem', textTransform: 'uppercase' }}>
