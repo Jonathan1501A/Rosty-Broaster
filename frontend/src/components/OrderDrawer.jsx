@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   X, 
   Search, 
@@ -59,7 +59,7 @@ export default function OrderDrawer({
     if (!product) return false;
     const name = String(product.name || '').toLowerCase();
     const desc = String(product.desc || '').toLowerCase();
-    const cat = String(activeCategory || '').toLowerCase();
+    const cat = String(product.categoriaNombre || activeCategory || '').toLowerCase();
     return name.includes('jugo') || desc.includes('jugo') || desc.includes('mora') || desc.includes('maracuyá') || cat.includes('jugo');
   };
 
@@ -67,7 +67,7 @@ export default function OrderDrawer({
     if (!product) return false;
     const name = String(product.name || '').toLowerCase();
     const desc = String(product.desc || '').toLowerCase();
-    const cat = String(activeCategory || '').toLowerCase();
+    const cat = String(product.categoriaNombre || activeCategory || '').toLowerCase();
     return (
       name.includes('gaseosa') ||
       name.includes('coca') ||
@@ -262,12 +262,41 @@ export default function OrderDrawer({
     }
   };
 
-  // Filtro de productos
-  const currentCategoryProducts = currentMenu[activeCategory] || [];
-  const filteredProducts = currentCategoryProducts.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.desc && p.desc.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Filtro de productos global: si hay texto de búsqueda, busca en TODAS las categorías simultáneamente
+  const isSearching = searchQuery.trim().length > 0;
+
+  const filteredProducts = useMemo(() => {
+    if (!isSearching) {
+      return (currentMenu[activeCategory] || []).map((p) => ({
+        ...p,
+        categoriaNombre: activeCategory
+      }));
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const results = [];
+    const seenIds = new Set();
+
+    // Recorrer todas las categorías del menú actual
+    for (const [catName, prods] of Object.entries(currentMenu)) {
+      if (!Array.isArray(prods)) continue;
+      for (const p of prods) {
+        if (!p || seenIds.has(p.id)) continue;
+        const nameMatch = (p.name || '').toLowerCase().includes(query);
+        const descMatch = (p.desc || '').toLowerCase().includes(query);
+        const catMatch = catName.toLowerCase().includes(query);
+
+        if (nameMatch || descMatch || catMatch) {
+          seenIds.add(p.id);
+          results.push({
+            ...p,
+            categoriaNombre: catName
+          });
+        }
+      }
+    }
+    return results;
+  }, [currentMenu, activeCategory, searchQuery, isSearching]);
 
   return (
     <div
@@ -421,12 +450,15 @@ export default function OrderDrawer({
               {/* Categorías Pills */}
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                 {categoriesList.map((cat) => {
-                  const isActive = activeCategory === cat;
+                  const isActive = activeCategory === cat && !isSearching;
                   return (
                     <button
                       key={cat}
                       type="button"
-                      onClick={() => setActiveCategory(cat)}
+                      onClick={() => {
+                        setActiveCategory(cat);
+                        if (searchQuery) setSearchQuery('');
+                      }}
                       style={{
                         padding: '7px 14px',
                         fontSize: '0.8rem',
@@ -434,7 +466,8 @@ export default function OrderDrawer({
                         borderRadius: '20px',
                         backgroundColor: isActive ? '#e27329' : '#3d2314',
                         color: isActive ? '#fff' : '#fbeee0',
-                        border: isActive ? '1.5px solid #ffcc00' : '1px solid #5c351e'
+                        border: isActive ? '1.5px solid #ffcc00' : '1px solid #5c351e',
+                        cursor: 'pointer'
                       }}
                     >
                       {cat}
@@ -446,90 +479,155 @@ export default function OrderDrawer({
 
             {/* Grid de Productos */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {filteredProducts.map((product) => {
-                const inCartItem = cart.find((i) => i.id === product.id);
-                const quantityInCart = inCartItem ? inCartItem.cantidad : 0;
-
-                return (
-                  <div
-                    key={product.id}
-                    onClick={() => handleProductClick(product)}
+              {isSearching && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', padding: '0 2px' }}>
+                  <span style={{ fontSize: '0.82rem', color: '#ffcc00', fontWeight: '800' }}>
+                    🔍 {filteredProducts.length} resultado(s) encontrados en todo el menú:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
                     style={{
-                      backgroundColor: quantityInCart > 0 ? '#422515' : '#341e11',
-                      border: quantityInCart > 0 ? '2px solid #e27329' : '1.5px solid #52301c',
-                      borderRadius: '12px',
-                      padding: '12px 16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '12px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#e27329',
+                      fontSize: '0.78rem',
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#ffcc00';
-                      e.currentTarget.style.backgroundColor = '#4d2b18';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = quantityInCart > 0 ? '#e27329' : '#52301c';
-                      e.currentTarget.style.backgroundColor = quantityInCart > 0 ? '#422515' : '#341e11';
+                      fontWeight: '800'
                     }}
                   >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#ffffff' }}>
-                          {product.name}
-                        </span>
-                        {quantityInCart > 0 && (
-                          <span
-                            style={{
-                              backgroundColor: '#e27329',
-                              color: '#fff',
-                              fontSize: '0.72rem',
-                              fontWeight: '900',
-                              padding: '2px 7px',
-                              borderRadius: '10px'
-                            }}
-                          >
-                            x{quantityInCart}
+                    Limpiar búsqueda ✕
+                  </button>
+                </div>
+              )}
+
+              {filteredProducts.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 10px', color: '#c4a48c' }}>
+                  <Search size={36} style={{ opacity: 0.35, margin: '0 auto 10px auto', display: 'block' }} />
+                  <p style={{ fontSize: '0.9rem', color: '#fbeee0', fontWeight: '700' }}>
+                    {isSearching ? `No se encontraron productos para "${searchQuery}"` : 'No hay productos en esta categoría'}
+                  </p>
+                  {isSearching && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      style={{
+                        marginTop: '10px',
+                        backgroundColor: '#3d2314',
+                        border: '1px solid #e27329',
+                        color: '#ffcc00',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        fontWeight: '700'
+                      }}
+                    >
+                      Ver todo el menú
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filteredProducts.map((product) => {
+                  const inCartItem = cart.find((i) => i.id === product.id);
+                  const quantityInCart = inCartItem ? inCartItem.cantidad : 0;
+
+                  return (
+                    <div
+                      key={product.id}
+                      onClick={() => handleProductClick(product)}
+                      style={{
+                        backgroundColor: quantityInCart > 0 ? '#422515' : '#341e11',
+                        border: quantityInCart > 0 ? '2px solid #e27329' : '1.5px solid #52301c',
+                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#ffcc00';
+                        e.currentTarget.style.backgroundColor = '#4d2b18';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = quantityInCart > 0 ? '#e27329' : '#52301c';
+                        e.currentTarget.style.backgroundColor = quantityInCart > 0 ? '#422515' : '#341e11';
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#ffffff' }}>
+                            {product.name}
                           </span>
+                          {isSearching && product.categoriaNombre && (
+                            <span
+                              style={{
+                                backgroundColor: '#21130a',
+                                border: '1px solid #5c351e',
+                                color: '#ffcc00',
+                                fontSize: '0.68rem',
+                                fontWeight: '700',
+                                padding: '1px 6px',
+                                borderRadius: '4px'
+                              }}
+                            >
+                              {product.categoriaNombre}
+                            </span>
+                          )}
+                          {quantityInCart > 0 && (
+                            <span
+                              style={{
+                                backgroundColor: '#e27329',
+                                color: '#fff',
+                                fontSize: '0.72rem',
+                                fontWeight: '900',
+                                padding: '2px 7px',
+                                borderRadius: '10px'
+                              }}
+                            >
+                              x{quantityInCart}
+                            </span>
+                          )}
+                        </div>
+                        {product.desc && (
+                          <p style={{ fontSize: '0.8rem', color: '#c4a48c', marginTop: '2px' }}>
+                            {product.desc}
+                          </p>
                         )}
                       </div>
-                      {product.desc && (
-                        <p style={{ fontSize: '0.8rem', color: '#c4a48c', marginTop: '2px' }}>
-                          {product.desc}
-                        </p>
-                      )}
-                    </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontWeight: '900', color: '#ffcc00', fontSize: '1.05rem', fontFamily: 'var(--font-mono)' }}>
-                        {formatCurrency(product.price)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleProductClick(product);
-                        }}
-                        style={{
-                          backgroundColor: '#e27329',
-                          color: '#fff',
-                          width: '34px',
-                          height: '34px',
-                          borderRadius: '8px',
-                          padding: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <Plus size={18} />
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontWeight: '900', color: '#ffcc00', fontSize: '1.05rem', fontFamily: 'var(--font-mono)' }}>
+                          {formatCurrency(product.price)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleProductClick(product);
+                          }}
+                          style={{
+                            backgroundColor: '#e27329',
+                            color: '#fff',
+                            width: '34px',
+                            height: '34px',
+                            borderRadius: '8px',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <Plus size={18} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
             {/* Barra rápida de catálogo: visible en cuanto se agrega al menos 1 producto */}

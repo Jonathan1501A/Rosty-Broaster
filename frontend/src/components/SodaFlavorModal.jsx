@@ -1,20 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { X, Check, Sparkles, MessageSquare, Snowflake, ThermometerSun } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Check, Sparkles, Send } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
 
-const SODA_FLAVORS = [
-  { id: 'cocacola', name: 'Coca-Cola Original', emoji: '🔴', desc: 'Clásica e inconfundible' },
-  { id: 'cocacola_zero', name: 'Coca-Cola Zero / Sin Azúcar', emoji: '⚫', desc: 'Cero azúcar y calorías' },
-  { id: 'manzana', name: 'Postobón Manzana', emoji: '🍏', desc: 'El sabor tradicional de manzana' },
-  { id: 'colombiana', name: 'Colombiana (La Nuestra)', emoji: '🟠', desc: 'Sabor único cola champaña' },
-  { id: 'quatro', name: 'Quatro (Toronja)', emoji: '🟡', desc: 'Refrescante toronja cítrica' },
-  { id: 'sprite', name: 'Sprite (Lima-Limón)', emoji: '🍋', desc: 'Cristalina y refrescante' },
-  { id: 'pepsi', name: 'Pepsi', emoji: '🔵', desc: 'Sabor cola intenso' },
-  { id: 'naranja', name: 'Postobón Naranja', emoji: '🍊', desc: 'Sabor dulce a naranja' },
-  { id: 'uva', name: 'Postobón Uva', emoji: '🍇', desc: 'Sabor tradicional a uva' },
-  { id: 'bretana', name: 'Bretaña (Agua con Gas)', emoji: '⚪', desc: 'Burbujeante y digestiva' },
-  { id: 'te', name: 'Té Helado (Limón / Durazno)', emoji: '🧃', desc: 'Té frío refrescante' },
-  { id: 'otro', name: 'Otro Sabor', emoji: '✨', desc: 'Especificar sabor personalizado' }
+const QUICK_SUGGESTIONS = [
+  'Colombiana',
+  'Manzana',
+  'Coca-Cola',
+  'Coca-Cola Zero',
+  'Quatro',
+  'Sprite',
+  'Bretaña',
+  'Pepsi',
+  'Naranja',
+  'Uva'
 ];
 
 const TEMP_OPTIONS = [
@@ -32,38 +30,38 @@ export default function SodaFlavorModal({
   initialNote = '',
   onConfirmFlavor
 }) {
-  const [selectedFlavor, setSelectedFlavor] = useState('');
-  const [customFlavor, setCustomFlavor] = useState('');
+  const [flavorText, setFlavorText] = useState('');
   const [tempType, setTempType] = useState('fria_hielo');
   const [specialNote, setSpecialNote] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen && product) {
-      const match = SODA_FLAVORS.find((f) => f.name.toLowerCase() === (initialFlavor || '').toLowerCase());
-      if (match) {
-        setSelectedFlavor(match.name);
-        setCustomFlavor('');
-      } else if (initialFlavor) {
-        setSelectedFlavor('Otro Sabor');
-        setCustomFlavor(initialFlavor);
-      } else {
-        setSelectedFlavor(SODA_FLAVORS[0].name);
-        setCustomFlavor('');
-      }
+      setFlavorText(initialFlavor || '');
       setTempType(initialTemp || 'fria_hielo');
       setSpecialNote(initialNote || '');
+      setErrorMessage('');
+
+      // Enfocar automáticamente el campo de texto al abrir
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      }, 100);
     }
   }, [isOpen, product, initialFlavor, initialTemp, initialNote]);
 
   if (!isOpen || !product) return null;
 
-  const finalFlavorName = selectedFlavor === 'Otro Sabor' 
-    ? (customFlavor.trim() || 'Sabor Especial') 
-    : selectedFlavor;
+  const handleConfirm = (e) => {
+    if (e) e.preventDefault();
+    const cleanFlavor = flavorText.trim();
 
-  const handleConfirm = () => {
-    if (!finalFlavorName.trim()) {
-      alert('Por favor selecciona o escribe el sabor de la gaseosa.');
+    if (!cleanFlavor) {
+      setErrorMessage('Por favor escribe el sabor de la gaseosa antes de continuar.');
+      if (inputRef.current) inputRef.current.focus();
       return;
     }
 
@@ -72,19 +70,27 @@ export default function SodaFlavorModal({
 
     const customizedProduct = {
       ...product,
-      name: `${cleanBaseName} (${finalFlavorName})`,
+      name: `${cleanBaseName} (${cleanFlavor})`,
       baseName: cleanBaseName,
-      sabor: finalFlavorName,
+      sabor: cleanFlavor,
       temperatura: tempType,
       nota: specialNote.trim() 
-        ? `${finalFlavorName} • ${tempLabel} [${specialNote.trim()}]`
-        : `${finalFlavorName} • ${tempLabel}`,
-      // ID único para diferenciar en comanda una gaseosa Manzana de una Coca-Cola
-      id: `${product.id || 701}-${finalFlavorName.toLowerCase().replace(/[^a-z0-9]/g, '_')}-${tempType}`
+        ? `${cleanFlavor} • ${tempLabel} [${specialNote.trim()}]`
+        : `${cleanFlavor} • ${tempLabel}`,
+      // ID único para diferenciar en comanda distintos sabores del mismo producto
+      id: `${product.id || 701}-${cleanFlavor.toLowerCase().replace(/[^a-z0-9]/g, '_')}-${tempType}`
     };
 
     onConfirmFlavor(customizedProduct);
     onClose();
+  };
+
+  const handleSuggestionClick = (flavor) => {
+    setFlavorText(flavor);
+    setErrorMessage('');
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
   return (
@@ -106,22 +112,21 @@ export default function SodaFlavorModal({
         className="animate-fade-in"
         style={{
           width: '100%',
-          maxWidth: '520px',
+          maxWidth: '480px',
           backgroundColor: '#26160c',
           border: '2.5px solid #e27329',
-          borderRadius: '24px',
+          borderRadius: '22px',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.95)',
-          maxHeight: '92vh'
+          boxShadow: '0 25px 60px rgba(0,0,0,0.95)'
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
         <div
           style={{
-            padding: '18px 24px',
+            padding: '16px 20px',
             backgroundColor: '#3d2314',
             borderBottom: '2px solid #5c351e',
             display: 'flex',
@@ -147,7 +152,7 @@ export default function SodaFlavorModal({
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '900', color: '#ffcc00' }}>
-                Selecciona el Sabor de Gaseosa
+                Sabor de la Gaseosa
               </h3>
               <p style={{ margin: 0, fontSize: '0.8rem', color: '#c4a48c' }}>
                 {product.name} • {formatCurrency(product.price)}
@@ -171,75 +176,87 @@ export default function SodaFlavorModal({
           </button>
         </div>
 
-        {/* Cuerpo / Opciones */}
-        <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          {/* Sabores de Gaseosa */}
+        {/* Formulario */}
+        <form onSubmit={handleConfirm} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Campo Principal: Escribir Sabor */}
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '900', color: '#ffcc00', marginBottom: '8px' }}>
-              1. Sabor de Gaseosa o Bebida:
+              ✍️ Escribe el sabor de la gaseosa: *
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
-              {SODA_FLAVORS.map((f) => {
-                const isSelected = selectedFlavor === f.name;
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Ej: Colombiana, Manzana, Coca-Cola Zero, Quatro..."
+              value={flavorText}
+              onChange={(e) => {
+                setFlavorText(e.target.value);
+                if (errorMessage) setErrorMessage('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleConfirm();
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                backgroundColor: '#1f1109',
+                border: errorMessage ? '2px solid #ef4444' : '2px solid #e27329',
+                borderRadius: '12px',
+                color: '#ffffff',
+                fontSize: '1rem',
+                fontWeight: '800',
+                outline: 'none',
+                boxShadow: '0 0 0 3px rgba(226, 115, 41, 0.2)'
+              }}
+            />
+            {errorMessage && (
+              <span style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: '700', marginTop: '4px', display: 'block' }}>
+                {errorMessage}
+              </span>
+            )}
+            <span style={{ fontSize: '0.72rem', color: '#c4a48c', marginTop: '4px', display: 'block' }}>
+              💡 Presiona <kbd style={{ background: '#3d2314', padding: '1px 5px', borderRadius: '4px', color: '#ffcc00' }}>Enter</kbd> para agregar rápidamente a la comanda.
+            </span>
+          </div>
+
+          {/* Sugerencias Rápidas para hacer clic si lo desean */}
+          <div>
+            <span style={{ fontSize: '0.72rem', color: '#c4a48c', fontWeight: '700', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+              O toca para seleccionar rápido:
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {QUICK_SUGGESTIONS.map((sug) => {
+                const isCurrent = flavorText.trim().toLowerCase() === sug.toLowerCase();
                 return (
                   <button
-                    key={f.id}
+                    key={sug}
                     type="button"
-                    onClick={() => setSelectedFlavor(f.name)}
+                    onClick={() => handleSuggestionClick(sug)}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '10px 12px',
-                      borderRadius: '12px',
-                      backgroundColor: isSelected ? 'rgba(226, 115, 41, 0.35)' : '#341e11',
-                      border: `1.5px solid ${isSelected ? '#e27329' : '#52301c'}`,
-                      color: isSelected ? '#ffcc00' : '#fbeee0',
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      backgroundColor: isCurrent ? '#e27329' : '#341e11',
+                      border: `1.5px solid ${isCurrent ? '#ffcc00' : '#52301c'}`,
+                      color: isCurrent ? '#ffffff' : '#fbeee0',
+                      fontSize: '0.75rem',
+                      fontWeight: isCurrent ? '900' : '700',
                       cursor: 'pointer',
-                      textAlign: 'left',
-                      fontWeight: isSelected ? '900' : '600',
-                      fontSize: '0.82rem',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <span style={{ fontSize: '1.15rem' }}>{f.emoji}</span>
-                    <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {f.name}
-                    </span>
-                    {isSelected && <Check size={14} color="#ffcc00" />}
+                    {sug}
                   </button>
                 );
               })}
             </div>
-
-            {/* Campo para sabor personalizado si elige 'Otro Sabor' */}
-            {selectedFlavor === 'Otro Sabor' && (
-              <div style={{ marginTop: '10px' }}>
-                <input
-                  type="text"
-                  placeholder="Escribe el sabor exacto (Ej: Postobón Kola, Ginger, etc.)..."
-                  value={customFlavor}
-                  onChange={(e) => setCustomFlavor(e.target.value)}
-                  autoFocus
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    backgroundColor: '#1f1109',
-                    border: '1.5px solid #e27329',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    fontSize: '0.9rem',
-                    fontWeight: '700'
-                  }}
-                />
-              </div>
-            )}
           </div>
 
           {/* Preferencia de Temperatura */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '900', color: '#ffcc00', marginBottom: '8px' }}>
-              2. Preferencia de Temperatura:
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '800', color: '#ffcc00', marginBottom: '6px' }}>
+              Temperatura:
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
               {TEMP_OPTIONS.map((t) => {
@@ -250,13 +267,13 @@ export default function SodaFlavorModal({
                     type="button"
                     onClick={() => setTempType(t.id)}
                     style={{
-                      padding: '10px 8px',
-                      borderRadius: '10px',
-                      backgroundColor: isSelected ? 'rgba(2, 136, 209, 0.3)' : '#341e11',
+                      padding: '8px 6px',
+                      borderRadius: '8px',
+                      backgroundColor: isSelected ? 'rgba(2, 136, 209, 0.35)' : '#341e11',
                       border: `1.5px solid ${isSelected ? '#0288d1' : '#52301c'}`,
                       color: isSelected ? '#4fc3f7' : '#fbeee0',
                       fontWeight: isSelected ? '800' : '600',
-                      fontSize: '0.8rem',
+                      fontSize: '0.78rem',
                       cursor: 'pointer',
                       textAlign: 'center'
                     }}
@@ -268,87 +285,86 @@ export default function SodaFlavorModal({
             </div>
           </div>
 
-          {/* Nota especial adicional */}
+          {/* Nota opcional */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: '#c4a48c', marginBottom: '4px', fontWeight: '700' }}>
-              Nota o Petición para Cocina/Despacho (Opcional):
+            <label style={{ display: 'block', fontSize: '0.75rem', color: '#c4a48c', marginBottom: '4px', fontWeight: '700' }}>
+              Nota adicional para despacho (Opcional):
             </label>
             <input
               type="text"
-              placeholder="Ej: vaso con limón, pitillo, bien fría..."
+              placeholder="Ej: vaso con limón, pitillo..."
               value={specialNote}
               onChange={(e) => setSpecialNote(e.target.value)}
               style={{
                 width: '100%',
-                padding: '9px 12px',
+                padding: '8px 12px',
                 backgroundColor: '#1f1109',
                 border: '1px solid #52301c',
                 borderRadius: '8px',
                 color: '#fff',
-                fontSize: '0.85rem'
+                fontSize: '0.825rem'
               }}
             />
           </div>
-        </div>
 
-        {/* Footer y Confirmación */}
-        <div
-          style={{
-            padding: '16px 20px',
-            backgroundColor: '#3d2314',
-            borderTop: '2px solid #5c351e',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px'
-          }}
-        >
-          <div>
-            <div style={{ fontSize: '0.75rem', color: '#c4a48c' }}>Total del Producto:</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#ffcc00', fontFamily: 'var(--font-mono)' }}>
-              {formatCurrency(product.price)}
+          {/* Footer y Confirmación */}
+          <div
+            style={{
+              paddingTop: '12px',
+              borderTop: '1.5px solid #5c351e',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              marginTop: '4px'
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.72rem', color: '#c4a48c' }}>Total:</div>
+              <div style={{ fontSize: '1.15rem', fontWeight: '900', color: '#ffcc00', fontFamily: 'var(--font-mono)' }}>
+                {formatCurrency(product.price)}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  padding: '9px 14px',
+                  backgroundColor: '#2b180d',
+                  border: '1.5px solid #5c351e',
+                  borderRadius: '10px',
+                  color: '#fbeee0',
+                  fontWeight: '700',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                style={{
+                  padding: '9px 18px',
+                  backgroundColor: '#e27329',
+                  border: '1.5px solid #ffcc00',
+                  borderRadius: '10px',
+                  color: '#ffffff',
+                  fontWeight: '900',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 14px rgba(226, 115, 41, 0.45)'
+                }}
+              >
+                <Check size={16} /> Confirmar Gaseosa
+              </button>
             </div>
           </div>
-
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: '10px 16px',
-                backgroundColor: '#2b180d',
-                border: '1.5px solid #5c351e',
-                borderRadius: '10px',
-                color: '#fbeee0',
-                fontWeight: '700',
-                fontSize: '0.85rem',
-                cursor: 'pointer'
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              style={{
-                padding: '10px 22px',
-                backgroundColor: '#e27329',
-                border: '1.5px solid #ffcc00',
-                borderRadius: '10px',
-                color: '#ffffff',
-                fontWeight: '900',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 4px 14px rgba(226, 115, 41, 0.45)'
-              }}
-            >
-              <Check size={18} /> Confirmar Gaseosa
-            </button>
-          </div>
-        </div>
+        </form>
       </div>
     </div>
   );
