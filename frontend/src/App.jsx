@@ -343,6 +343,22 @@ export default function App() {
       onStatsUpdated: (updatedStats) => {
         setStats(updatedStats);
       },
+      onMenuUpdated: ({ tenantId, menu: updatedMenu }) => {
+        if (!tenantId || tenantId === currentTenantId) {
+          if (updatedMenu && typeof updatedMenu === 'object') {
+            setTenant((prev) => ({ ...prev, menu: updatedMenu }));
+            try {
+              const activeId = tenantId || currentTenantId;
+              const stored = localStorage.getItem(`rosty_tenant_${activeId}`);
+              if (stored) {
+                const parsed = JSON.parse(stored);
+                parsed.menu = updatedMenu;
+                localStorage.setItem(`rosty_tenant_${activeId}`, JSON.stringify(parsed));
+              }
+            } catch {}
+          }
+        }
+      },
       onExpenseCreated: (data) => {
         if (!data.tenantId || data.tenantId === currentTenantId) {
           fetchData();

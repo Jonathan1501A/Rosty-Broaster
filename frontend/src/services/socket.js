@@ -88,6 +88,10 @@ export const initSocket = (tenantId = 'rosty-broaster', callbacks = {}) => {
     socket.on('expense:deleted', callbacks.onExpenseDeleted);
   }
 
+  if (callbacks.onMenuUpdated) {
+    socket.on('tenant:menu_updated', callbacks.onMenuUpdated);
+  }
+
   if (callbacks.onNotificationNew) {
     socket.on('notification:new', callbacks.onNotificationNew);
   }

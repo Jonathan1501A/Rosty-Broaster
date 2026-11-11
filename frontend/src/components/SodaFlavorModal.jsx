@@ -1,19 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Check, Sparkles, Send } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { formatCurrency } from '../data/menu.js';
-
-const QUICK_SUGGESTIONS = [
-  'Colombiana',
-  'Manzana',
-  'Coca-Cola',
-  'Coca-Cola Zero',
-  'Quatro',
-  'Sprite',
-  'Bretaña',
-  'Pepsi',
-  'Naranja',
-  'Uva'
-];
 
 const TEMP_OPTIONS = [
   { id: 'fria_hielo', label: '❄️ Fría con Hielo' },
@@ -60,7 +47,7 @@ export default function SodaFlavorModal({
     const cleanFlavor = flavorText.trim();
 
     if (!cleanFlavor) {
-      setErrorMessage('Por favor escribe el sabor de la gaseosa antes de continuar.');
+      setErrorMessage('Por favor escribe el sabor de la gaseosa a mano.');
       if (inputRef.current) inputRef.current.focus();
       return;
     }
@@ -77,20 +64,11 @@ export default function SodaFlavorModal({
       nota: specialNote.trim() 
         ? `${cleanFlavor} • ${tempLabel} [${specialNote.trim()}]`
         : `${cleanFlavor} • ${tempLabel}`,
-      // ID único para diferenciar en comanda distintos sabores del mismo producto
       id: `${product.id || 701}-${cleanFlavor.toLowerCase().replace(/[^a-z0-9]/g, '_')}-${tempType}`
     };
 
     onConfirmFlavor(customizedProduct);
     onClose();
-  };
-
-  const handleSuggestionClick = (flavor) => {
-    setFlavorText(flavor);
-    setErrorMessage('');
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
   };
 
   return (
@@ -112,7 +90,7 @@ export default function SodaFlavorModal({
         className="animate-fade-in"
         style={{
           width: '100%',
-          maxWidth: '480px',
+          maxWidth: '460px',
           backgroundColor: '#26160c',
           border: '2.5px solid #e27329',
           borderRadius: '22px',
@@ -178,9 +156,9 @@ export default function SodaFlavorModal({
 
         {/* Formulario */}
         <form onSubmit={handleConfirm} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Campo Principal: Escribir Sabor */}
+          {/* Único Campo: Cuadro de texto para escribir el sabor a mano */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '900', color: '#ffcc00', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '900', color: '#ffcc00', marginBottom: '8px' }}>
               ✍️ Escribe el sabor de la gaseosa: *
             </label>
             <input
@@ -200,57 +178,25 @@ export default function SodaFlavorModal({
               }}
               style={{
                 width: '100%',
-                padding: '12px 14px',
+                padding: '13px 16px',
                 backgroundColor: '#1f1109',
                 border: errorMessage ? '2px solid #ef4444' : '2px solid #e27329',
                 borderRadius: '12px',
                 color: '#ffffff',
-                fontSize: '1rem',
+                fontSize: '1.05rem',
                 fontWeight: '800',
                 outline: 'none',
-                boxShadow: '0 0 0 3px rgba(226, 115, 41, 0.2)'
+                boxShadow: '0 0 0 3px rgba(226, 115, 41, 0.25)'
               }}
             />
             {errorMessage && (
-              <span style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: '700', marginTop: '4px', display: 'block' }}>
+              <span style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: '700', marginTop: '5px', display: 'block' }}>
                 {errorMessage}
               </span>
             )}
-            <span style={{ fontSize: '0.72rem', color: '#c4a48c', marginTop: '4px', display: 'block' }}>
-              💡 Presiona <kbd style={{ background: '#3d2314', padding: '1px 5px', borderRadius: '4px', color: '#ffcc00' }}>Enter</kbd> para agregar rápidamente a la comanda.
+            <span style={{ fontSize: '0.74rem', color: '#c4a48c', marginTop: '6px', display: 'block' }}>
+              💡 Presiona <kbd style={{ background: '#3d2314', padding: '2px 6px', borderRadius: '4px', color: '#ffcc00' }}>Enter</kbd> para agregar directamente a la comanda.
             </span>
-          </div>
-
-          {/* Sugerencias Rápidas para hacer clic si lo desean */}
-          <div>
-            <span style={{ fontSize: '0.72rem', color: '#c4a48c', fontWeight: '700', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-              O toca para seleccionar rápido:
-            </span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {QUICK_SUGGESTIONS.map((sug) => {
-                const isCurrent = flavorText.trim().toLowerCase() === sug.toLowerCase();
-                return (
-                  <button
-                    key={sug}
-                    type="button"
-                    onClick={() => handleSuggestionClick(sug)}
-                    style={{
-                      padding: '5px 10px',
-                      borderRadius: '8px',
-                      backgroundColor: isCurrent ? '#e27329' : '#341e11',
-                      border: `1.5px solid ${isCurrent ? '#ffcc00' : '#52301c'}`,
-                      color: isCurrent ? '#ffffff' : '#fbeee0',
-                      fontSize: '0.75rem',
-                      fontWeight: isCurrent ? '900' : '700',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {sug}
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           {/* Preferencia de Temperatura */}
@@ -267,7 +213,7 @@ export default function SodaFlavorModal({
                     type="button"
                     onClick={() => setTempType(t.id)}
                     style={{
-                      padding: '8px 6px',
+                      padding: '9px 6px',
                       borderRadius: '8px',
                       backgroundColor: isSelected ? 'rgba(2, 136, 209, 0.35)' : '#341e11',
                       border: `1.5px solid ${isSelected ? '#0288d1' : '#52301c'}`,
@@ -288,7 +234,7 @@ export default function SodaFlavorModal({
           {/* Nota opcional */}
           <div>
             <label style={{ display: 'block', fontSize: '0.75rem', color: '#c4a48c', marginBottom: '4px', fontWeight: '700' }}>
-              Nota adicional para despacho (Opcional):
+              Nota o Petición adicional (Opcional):
             </label>
             <input
               type="text"
@@ -297,12 +243,12 @@ export default function SodaFlavorModal({
               onChange={(e) => setSpecialNote(e.target.value)}
               style={{
                 width: '100%',
-                padding: '8px 12px',
+                padding: '9px 12px',
                 backgroundColor: '#1f1109',
                 border: '1px solid #52301c',
                 borderRadius: '8px',
                 color: '#fff',
-                fontSize: '0.825rem'
+                fontSize: '0.85rem'
               }}
             />
           </div>
@@ -321,7 +267,7 @@ export default function SodaFlavorModal({
           >
             <div>
               <div style={{ fontSize: '0.72rem', color: '#c4a48c' }}>Total:</div>
-              <div style={{ fontSize: '1.15rem', fontWeight: '900', color: '#ffcc00', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#ffcc00', fontFamily: 'var(--font-mono)' }}>
                 {formatCurrency(product.price)}
               </div>
             </div>
@@ -331,7 +277,7 @@ export default function SodaFlavorModal({
                 type="button"
                 onClick={onClose}
                 style={{
-                  padding: '9px 14px',
+                  padding: '10px 16px',
                   backgroundColor: '#2b180d',
                   border: '1.5px solid #5c351e',
                   borderRadius: '10px',
@@ -346,7 +292,7 @@ export default function SodaFlavorModal({
               <button
                 type="submit"
                 style={{
-                  padding: '9px 18px',
+                  padding: '10px 20px',
                   backgroundColor: '#e27329',
                   border: '1.5px solid #ffcc00',
                   borderRadius: '10px',

@@ -16,6 +16,15 @@ import { MENU_CATEGORIES, formatCurrency } from '../data/menu.js';
 import JuiceFlavorModal from './JuiceFlavorModal.jsx';
 import SodaFlavorModal from './SodaFlavorModal.jsx';
 
+const normalizeSearchText = (str) => {
+  if (!str) return '';
+  return String(str)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+};
+
 export default function OrderDrawer({ 
   isOpen, 
   onClose, 
@@ -29,8 +38,21 @@ export default function OrderDrawer({
   menu,
   tenant
 }) {
-  const currentMenu = menu && Object.keys(menu).length > 0 ? menu : MENU_CATEGORIES;
-  const categoriesList = Object.keys(currentMenu);
+  const currentMenu = useMemo(() => {
+    if (menu && Object.keys(menu).length > 0) return menu;
+    if (tenant?.menu && Object.keys(tenant.menu).length > 0) return tenant.menu;
+    try {
+      const activeId = tenant?.id || localStorage.getItem('rosty_active_tenant_id') || 'rosty-broaster';
+      const stored = localStorage.getItem(`rosty_tenant_${activeId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.menu && Object.keys(parsed.menu).length > 0) return parsed.menu;
+      }
+    } catch {}
+    return MENU_CATEGORIES;
+  }, [menu, tenant]);
+
+  const categoriesList = useMemo(() => Object.keys(currentMenu || {}), [currentMenu]);
   const [activeCategory, setActiveCategory] = useState(categoriesList[0] || 'Pollo Broaster 🍗');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
@@ -152,7 +174,7 @@ export default function OrderDrawer({
     if (categoriesList.length > 0 && !categoriesList.includes(activeCategory)) {
       setActiveCategory(categoriesList[0]);
     }
-  }, [menu]);
+  }, [categoriesList, activeCategory]);
 
   // Guardar referencia del estado anterior para inicializar solo al ABRIR
   const prevIsOpenRef = useRef(false);
@@ -262,35 +284,43 @@ export default function OrderDrawer({
     }
   };
 
-  // Filtro de productos global: si hay texto de búsqueda, busca en TODAS las categorías simultáneamente
+  // Filtro de productos global: si hay texto de búsqueda, busca en TODAS las categorías simultáneamente (incluyendo las creadas por el usuario)
   const isSearching = searchQuery.trim().length > 0;
 
   const filteredProducts = useMemo(() => {
     if (!isSearching) {
-      return (currentMenu[activeCategory] || []).map((p) => ({
+      return (currentMenu[activeCategory] || []).map((p, idx) => ({
         ...p,
-        categoriaNombre: activeCategory
+        categoriaNombre: activeCategory,
+        uniqueRenderKey: `cat-${activeCategory}-${p.id || idx}`
       }));
     }
 
-    const query = searchQuery.toLowerCase().trim();
+    const normalizedQuery = normalizeSearchText(searchQuery);
+    const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
     const results = [];
-    const seenIds = new Set();
 
-    // Recorrer todas las categorías del menú actual
+    // Recorrer absolutamente TODAS las categorías del menú (predeterminadas y las creadas por el usuario)
     for (const [catName, prods] of Object.entries(currentMenu)) {
       if (!Array.isArray(prods)) continue;
-      for (const p of prods) {
-        if (!p || seenIds.has(p.id)) continue;
-        const nameMatch = (p.name || '').toLowerCase().includes(query);
-        const descMatch = (p.desc || '').toLowerCase().includes(query);
-        const catMatch = catName.toLowerCase().includes(query);
+      const normalizedCatName = normalizeSearchText(catName);
 
-        if (nameMatch || descMatch || catMatch) {
-          seenIds.add(p.id);
+      for (let idx = 0; idx < prods.length; idx++) {
+        const p = prods[idx];
+        if (!p) continue;
+
+        const normalizedName = normalizeSearchText(p.name);
+        const normalizedDesc = normalizeSearchText(p.desc);
+        const combinedHaystack = `${normalizedName} ${normalizedDesc} ${normalizedCatName}`;
+
+        // Coincide si todos los términos buscados están en el nombre, descripción o categoría
+        const matchesAllTokens = queryTokens.every((token) => combinedHaystack.includes(token));
+
+        if (matchesAllTokens) {
           results.push({
             ...p,
-            categoriaNombre: catName
+            categoriaNombre: catName,
+            uniqueRenderKey: `search-${catName}-${p.id || idx}`
           });
         }
       }
@@ -534,7 +564,7 @@ export default function OrderDrawer({
 
                   return (
                     <div
-                      key={product.id}
+                      key={product.uniqueRenderKey || `${product.categoriaNombre}-${product.id}`}
                       onClick={() => handleProductClick(product)}
                       style={{
                         backgroundColor: quantityInCart > 0 ? '#422515' : '#341e11',
