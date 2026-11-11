@@ -94,6 +94,7 @@ export default function App() {
     servicioTipo: 'dine_in',
     mesaNumero: null,
     initialItems: [],
+    initialPeticion: '',
     editingOrderId: null
   });
 
@@ -477,6 +478,7 @@ export default function App() {
       servicioTipo: 'dine_in',
       mesaNumero: numero,
       initialItems: activeOrder ? activeOrder.items : (pedidoActual || []),
+      initialPeticion: activeOrder?.peticionCliente || '',
       editingOrderId: activeOrder ? activeOrder.id : null
     });
   };
@@ -489,6 +491,7 @@ export default function App() {
       servicioTipo: order.tipo || 'dine_in',
       mesaNumero: mesaNum,
       initialItems: order.items || [],
+      initialPeticion: order.peticionCliente || '',
       editingOrderId: order.id
     });
   };
@@ -500,6 +503,7 @@ export default function App() {
       servicioTipo: 'delivery',
       mesaNumero: null,
       initialItems: [],
+      initialPeticion: '',
       editingOrderId: null
     });
   };
@@ -511,6 +515,7 @@ export default function App() {
       servicioTipo: 'takeout',
       mesaNumero: null,
       initialItems: [],
+      initialPeticion: '',
       editingOrderId: null
     });
   };
@@ -543,6 +548,7 @@ export default function App() {
       cliente: orderPayload.cliente,
       datosExtra: orderPayload.datosExtra,
       items: orderPayload.items,
+      peticionCliente: orderPayload.peticionCliente || '',
       total: orderPayload.total,
       estado: 'En preparación',
       createdAt: new Date().toISOString(),
@@ -614,6 +620,7 @@ export default function App() {
       cliente: orderPayload.cliente,
       datosExtra: orderPayload.datosExtra,
       items: orderPayload.items,
+      peticionCliente: orderPayload.peticionCliente !== undefined ? orderPayload.peticionCliente : '',
       total: orderPayload.total,
       domiciliarioId: orderPayload.domiciliarioId || null,
       domiciliarioNombre: orderPayload.domiciliarioNombre || null,
@@ -643,7 +650,12 @@ export default function App() {
     } catch (e) {}
 
     try {
-      await api.updateOrder(orderId, updatedFields, currentTenantId);
+      const serverUpdated = await api.updateOrder(orderId, updatedFields, currentTenantId);
+      if (serverUpdated && serverUpdated.id) {
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, ...serverUpdated } : o))
+        );
+      }
     } catch (err) {
       console.debug('Error sincronizando edición de comanda con backend:', err.message);
     }
@@ -1080,6 +1092,7 @@ export default function App() {
         servicioTipo={orderModal.servicioTipo}
         mesaNumero={orderModal.mesaNumero}
         initialItems={orderModal.initialItems}
+        initialPeticion={orderModal.initialPeticion}
         onSendOrder={handleSendOrder}
         onUpdateExistingOrder={handleUpdateExistingOrder}
         editingOrderId={orderModal.editingOrderId}

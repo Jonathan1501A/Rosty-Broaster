@@ -187,34 +187,45 @@ input::placeholder, textarea::placeholder {
 
   html, body {
     width: 80mm !important;
+    max-width: 80mm !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ocultar toda la interfaz de la aplicación al imprimir */
+  body > *:not(#thermal-receipt-printable-area) {
+    display: none !important;
   }
 
   .no-print {
     display: none !important;
   }
 
-  /* Cuando se imprime directamente desde el modal */
-  .thermal-print-modal-overlay {
-    position: static !important;
-    background: #ffffff !important;
-    padding: 0 !important;
+  /* Contenedor oficial para impresión térmica directa de 80 mm */
+  #thermal-receipt-printable-area {
     display: block !important;
-    width: 80mm !important;
+    position: static !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
+    margin: 0 auto !important;
+    padding: 3mm 1mm 12mm 1mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace !important;
+    font-size: 11.5px !important;
+    line-height: 1.32 !important;
+    box-sizing: border-box !important;
   }
 
-  .thermal-print-modal-content {
-    position: static !important;
-    background: #ffffff !important;
-    border: none !important;
+  #thermal-receipt-printable-area * {
+    color: #000000 !important;
+    background: transparent !important;
     box-shadow: none !important;
-    width: 80mm !important;
-    max-width: 80mm !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    text-shadow: none !important;
   }
 
   .thermal-ticket-container {
@@ -223,7 +234,7 @@ input::placeholder, textarea::placeholder {
     width: 72mm !important;
     max-width: 72mm !important;
     margin: 0 auto !important;
-    padding: 4mm 2mm 15mm 2mm !important;
+    padding: 3mm 1mm 10mm 1mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
@@ -231,10 +242,9 @@ input::placeholder, textarea::placeholder {
     font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace !important;
     font-size: 11.5px !important;
     line-height: 1.3 !important;
-    visibility: visible !important;
   }
 
   .thermal-ticket-container * {
-    visibility: visible !important;
+    color: #000000 !important;
   }
 }

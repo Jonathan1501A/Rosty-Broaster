@@ -32,7 +32,7 @@ router.get('/', (req, res) => {
  */
 router.post('/', orderLimiter, (req, res) => {
   const tenantId = getTenantId(req);
-  const { id, tipo, destino, cliente, datosExtra, items, total, mesaNumero, domiciliarioId, domiciliarioNombre, domiciliarioTelefono } = req.body;
+  const { id, tipo, destino, cliente, datosExtra, peticionCliente, items, total, mesaNumero, domiciliarioId, domiciliarioNombre, domiciliarioTelefono } = req.body;
 
   if (!tipo || !['dine_in', 'delivery', 'takeout'].includes(tipo)) {
     return res.status(400).json({ error: 'Tipo de servicio no válido (dine_in, delivery, takeout).' });
@@ -55,9 +55,11 @@ router.post('/', orderLimiter, (req, res) => {
   const cleanItems = items.map((it) => ({
     id: it.id,
     name: String(it.name).slice(0, 80),
+    sabor: it.sabor || null,
+    nota: it.nota || null,
     price: Math.max(0, Number(it.price) || 0),
     cantidad: Math.max(1, Number(it.cantidad) || 1),
-    completado: false
+    completado: Boolean(it.completado) || false
   }));
 
   const cleanTotal = cleanItems.reduce((acc, curr) => acc + curr.price * curr.cantidad, 0);
@@ -68,6 +70,7 @@ router.post('/', orderLimiter, (req, res) => {
     destino: cleanDestino,
     cliente: cleanCliente,
     datosExtra: datosExtra || '',
+    peticionCliente: peticionCliente ? String(peticionCliente).trim() : '',
     items: cleanItems,
     total: cleanTotal,
     mesaNumero: tipo === 'dine_in' ? Number(mesaNumero) : null,
@@ -128,8 +131,9 @@ router.patch('/:id/items/:itemId/toggle', (req, res) => {
   const tenantId = getTenantId(req);
   const { id, itemId } = req.params;
 
-  const updatedOrder = (store.toggleOrderItem && store.toggleOrderItem(tenantId, id, Number(itemId))) || 
-                       (store.toggleItemComplete && store.toggleItemComplete(tenantId, id, Number(itemId)));
+  const parsedItemId = !isNaN(Number(itemId)) ? Number(itemId) : itemId;
+  const updatedOrder = (store.toggleOrderItem && store.toggleOrderItem(tenantId, id, parsedItemId)) || 
+                       (store.toggleItemComplete && store.toggleItemComplete(tenantId, id, parsedItemId));
   if (!updatedOrder) {
     return res.status(404).json({ error: 'Comanda o ítem no encontrado.' });
   }
@@ -183,13 +187,14 @@ router.post('/settle', (req, res) => {
 router.put('/:id', (req, res) => {
   const tenantId = getTenantId(req);
   const { id } = req.params;
-  const { items, cliente, destino, datosExtra, domiciliarioId, domiciliarioNombre, domiciliarioTelefono } = req.body;
+  const { items, cliente, destino, datosExtra, peticionCliente, domiciliarioId, domiciliarioNombre, domiciliarioTelefono } = req.body;
 
   const updatedOrder = store.updateOrder(tenantId, id, {
     items,
     cliente,
     destino,
     datosExtra,
+    peticionCliente,
     domiciliarioId,
     domiciliarioNombre,
     domiciliarioTelefono

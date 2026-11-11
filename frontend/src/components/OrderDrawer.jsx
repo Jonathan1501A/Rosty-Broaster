@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { MENU_CATEGORIES, formatCurrency } from '../data/menu.js';
 import JuiceFlavorModal from './JuiceFlavorModal.jsx';
+import SodaFlavorModal from './SodaFlavorModal.jsx';
 
 export default function OrderDrawer({ 
   isOpen, 
@@ -21,6 +22,7 @@ export default function OrderDrawer({
   servicioTipo, // 'dine_in' | 'delivery' | 'takeout'
   mesaNumero, 
   initialItems = [], 
+  initialPeticion = '',
   onSendOrder,
   onUpdateExistingOrder,
   editingOrderId = null,
@@ -32,6 +34,7 @@ export default function OrderDrawer({
   const [activeCategory, setActiveCategory] = useState(categoriesList[0] || 'Pollo Broaster 🍗');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
+  const [peticionCliente, setPeticionCliente] = useState(initialPeticion || '');
   const [customerData, setCustomerData] = useState({
     name: '',
     phone: '',
@@ -41,16 +44,44 @@ export default function OrderDrawer({
   const [selectedDomiciliarioId, setSelectedDomiciliarioId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
+  
+  // Modal de Jugos Naturales
   const [isJuiceModalOpen, setIsJuiceModalOpen] = useState(false);
   const [juiceModalProduct, setJuiceModalProduct] = useState(null);
   const [editingCartItem, setEditingCartItem] = useState(null);
+
+  // Modal de Gaseosas
+  const [isSodaModalOpen, setIsSodaModalOpen] = useState(false);
+  const [sodaModalProduct, setSodaModalProduct] = useState(null);
+  const [editingSodaCartItem, setEditingSodaCartItem] = useState(null);
 
   const isJuiceProduct = (product) => {
     if (!product) return false;
     const name = String(product.name || '').toLowerCase();
     const desc = String(product.desc || '').toLowerCase();
     const cat = String(activeCategory || '').toLowerCase();
-    return name.includes('jugo') || desc.includes('mora') || desc.includes('maracuyá') || cat.includes('jugo');
+    return name.includes('jugo') || desc.includes('jugo') || desc.includes('mora') || desc.includes('maracuyá') || cat.includes('jugo');
+  };
+
+  const isSodaProduct = (product) => {
+    if (!product) return false;
+    const name = String(product.name || '').toLowerCase();
+    const desc = String(product.desc || '').toLowerCase();
+    const cat = String(activeCategory || '').toLowerCase();
+    return (
+      name.includes('gaseosa') ||
+      name.includes('coca') ||
+      name.includes('postobon') ||
+      name.includes('postobón') ||
+      name.includes('colombiana') ||
+      name.includes('quatro') ||
+      name.includes('sprite') ||
+      name.includes('pepsi') ||
+      name.includes('bretaña') ||
+      name.includes('refresco') ||
+      desc.includes('gaseosa') ||
+      cat.includes('gaseosa')
+    );
   };
 
   const handleProductClick = (product) => {
@@ -58,15 +89,25 @@ export default function OrderDrawer({
       setJuiceModalProduct(product);
       setEditingCartItem(null);
       setIsJuiceModalOpen(true);
+    } else if (isSodaProduct(product)) {
+      setSodaModalProduct(product);
+      setEditingSodaCartItem(null);
+      setIsSodaModalOpen(true);
     } else {
       handleAddToCart(product);
     }
   };
 
   const handleOpenFlavorForEdit = (cartItem) => {
-    setJuiceModalProduct(cartItem);
-    setEditingCartItem(cartItem);
-    setIsJuiceModalOpen(true);
+    if (isSodaProduct(cartItem)) {
+      setSodaModalProduct(cartItem);
+      setEditingSodaCartItem(cartItem);
+      setIsSodaModalOpen(true);
+    } else {
+      setJuiceModalProduct(cartItem);
+      setEditingCartItem(cartItem);
+      setIsJuiceModalOpen(true);
+    }
   };
 
   const handleConfirmJuiceFlavor = (customizedProduct) => {
@@ -75,6 +116,25 @@ export default function OrderDrawer({
         prev.map((it) => (it.id === editingCartItem.id ? { ...customizedProduct, cantidad: editingCartItem.cantidad } : it))
       );
       setEditingCartItem(null);
+    } else {
+      setCart((prev) => {
+        const exists = prev.find((item) => item.id === customizedProduct.id);
+        if (exists) {
+          return prev.map((item) =>
+            item.id === customizedProduct.id ? { ...item, cantidad: item.cantidad + 1 } : item
+          );
+        }
+        return [...prev, { ...customizedProduct, cantidad: 1, completado: false }];
+      });
+    }
+  };
+
+  const handleConfirmSodaFlavor = (customizedProduct) => {
+    if (editingSodaCartItem) {
+      setCart((prev) =>
+        prev.map((it) => (it.id === editingSodaCartItem.id ? { ...customizedProduct, cantidad: editingSodaCartItem.cantidad } : it))
+      );
+      setEditingSodaCartItem(null);
     } else {
       setCart((prev) => {
         const exists = prev.find((item) => item.id === customizedProduct.id);
@@ -101,6 +161,7 @@ export default function OrderDrawer({
     if (isOpen && !prevIsOpenRef.current) {
       // Solo inicializar exactamente cuando el drawer se abre de cerrado a abierto
       setCart(initialItems && initialItems.length > 0 ? JSON.parse(JSON.stringify(initialItems)) : []);
+      setPeticionCliente(initialPeticion || '');
       setCustomerData({ name: '', phone: '', address: '' });
       setSelectedDomiciliarioId(domiciliarios[0]?.id || '');
       setValidationError('');
@@ -108,7 +169,7 @@ export default function OrderDrawer({
       setIsSubmitting(false);
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen]);
+  }, [isOpen, initialPeticion]);
 
   if (!isOpen) return null;
 
@@ -179,6 +240,7 @@ export default function OrderDrawer({
       cliente: finalCustomerName,
       datosExtra: servicioTipo === 'delivery' ? `Tel: ${finalPhone}` : servicioTipo === 'takeout' ? (customerData.phone.trim() ? `Tel/Nota: ${customerData.phone.trim()}` : 'Para llevar') : 'Salón',
       items: cart,
+      peticionCliente: peticionCliente.trim(),
       total: calculateTotal(),
       domiciliarioId,
       domiciliarioNombre,
@@ -624,6 +686,30 @@ export default function OrderDrawer({
               </div>
             )}
 
+            {/* Apartado de Petición u Observación Especial del Cliente */}
+            <div style={{ padding: '12px 16px 8px 16px', backgroundColor: '#21130a', borderBottom: '1.5px solid #52301c' }}>
+              <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#ffcc00', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                📝 Petición u observación del cliente:
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Ej: Sin cebolla, pollo bien tostado, salsas aparte, etc."
+                value={peticionCliente}
+                onChange={(e) => setPeticionCliente(e.target.value)}
+                style={{
+                  width: '100%',
+                  fontSize: '0.825rem',
+                  padding: '8px 10px',
+                  backgroundColor: '#2b180d',
+                  border: '1.5px solid #5c351e',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  resize: 'none',
+                  fontFamily: 'inherit'
+                }}
+              />
+            </div>
+
             {/* Lista del Carrito */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
@@ -843,6 +929,20 @@ export default function OrderDrawer({
         initialBase={editingCartItem?.base || ''}
         initialNote={editingCartItem?.nota || ''}
         onConfirmFlavor={handleConfirmJuiceFlavor}
+      />
+
+      {/* Modal de Selección y Personalización de Sabores de Gaseosa */}
+      <SodaFlavorModal
+        isOpen={isSodaModalOpen}
+        onClose={() => {
+          setIsSodaModalOpen(false);
+          setEditingSodaCartItem(null);
+        }}
+        product={sodaModalProduct}
+        initialFlavor={editingSodaCartItem?.sabor || ''}
+        initialTemp={editingSodaCartItem?.temperatura || ''}
+        initialNote={editingSodaCartItem?.notaSoda || ''}
+        onConfirmFlavor={handleConfirmSodaFlavor}
       />
     </div>
   );

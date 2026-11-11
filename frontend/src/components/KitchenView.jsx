@@ -67,19 +67,24 @@ export default function KitchenView({
     const isDineIn = orden.tipo === 'dine_in';
     const mesaNum = isDineIn && orden.destino ? Number(orden.destino.replace(/\D/g, '')) || null : null;
 
+    const allItems = Array.isArray(orden.items) ? orden.items : [];
+    const hasPendingAdditions = allItems.some(it => it.esAdicion && !it.completado);
+    const itemsPendientes = allItems.filter(it => !it.completado);
+    const itemsListos = allItems.filter(it => it.completado);
+
     return (
       <div
         key={orden.id}
         className="animate-fade-in"
         style={{
           backgroundColor: '#3d2314',
-          border: `2px solid ${isReady ? '#2e7d32' : '#e27329'}`,
+          border: `2px solid ${isReady ? '#2e7d32' : hasPendingAdditions ? '#ffcc00' : '#e27329'}`,
           borderRadius: '16px',
           padding: '16px',
           display: 'flex',
           flexDirection: 'column',
           gap: '12px',
-          boxShadow: '0 6px 18px rgba(0,0,0,0.5)',
+          boxShadow: hasPendingAdditions ? '0 0 16px rgba(255, 204, 0, 0.35)' : '0 6px 18px rgba(0,0,0,0.5)',
           position: 'relative'
         }}
       >
@@ -106,6 +111,25 @@ export default function KitchenView({
                 {isDelivery ? <Bike size={14} /> : isTakeout ? <ShoppingBag size={14} /> : <UtensilsCrossed size={14} />}
                 {isDelivery ? 'Domicilio' : isTakeout ? 'Para Llevar' : 'Mesa Salón'}
               </span>
+
+              {hasPendingAdditions && (
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: '900',
+                    color: '#1f1109',
+                    backgroundColor: '#ffcc00',
+                    padding: '3px 8px',
+                    borderRadius: '8px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    border: '1px solid #ffffff'
+                  }}
+                >
+                  🔥 ADICIÓN PENDIENTE
+                </span>
+              )}
             </div>
 
             <div style={{ fontSize: '0.825rem', color: '#fbeee0', marginTop: '4px', fontWeight: '600' }}>
@@ -140,7 +164,31 @@ export default function KitchenView({
           </div>
         </div>
 
-        {/* Lista de Platos con Checkboxes */}
+        {/* Petición u Observación Especial del Cliente */}
+        {orden.peticionCliente && (
+          <div
+            style={{
+              backgroundColor: 'rgba(255, 204, 0, 0.12)',
+              border: '1.5px solid #ffcc00',
+              borderRadius: '8px',
+              padding: '8px 10px',
+              color: '#ffcc00',
+              fontSize: '0.825rem',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '6px'
+            }}
+          >
+            <span style={{ fontSize: '1rem', flexShrink: 0 }}>📝</span>
+            <div>
+              <span style={{ color: '#fff', fontWeight: '800', marginRight: '4px' }}>Petición:</span>
+              <span style={{ color: '#fbeee0' }}>{orden.peticionCliente}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Lista de Platos con Diferenciación de Nuevas Adiciones y Preparados */}
         <div
           style={{
             backgroundColor: '#2b180d',
@@ -152,55 +200,131 @@ export default function KitchenView({
             gap: '8px'
           }}
         >
-          {orden.items && orden.items.length > 0 ? (
-            orden.items.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => onToggleItem && onToggleItem(orden.id, item.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  cursor: 'pointer',
-                  padding: '6px 8px',
-                  borderRadius: '8px',
-                  backgroundColor: item.completado ? 'rgba(46, 125, 50, 0.25)' : 'transparent',
-                  border: item.completado ? '1px solid #2e7d32' : '1px solid transparent',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <div
-                  style={{
-                    width: '22px',
-                    height: '22px',
-                    borderRadius: '6px',
-                    border: `2px solid ${item.completado ? '#2e7d32' : '#e27329'}`,
-                    backgroundColor: item.completado ? '#2e7d32' : 'transparent',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}
-                >
-                  {item.completado && <Check size={16} />}
-                </div>
-
-                <div style={{ flex: 1, fontSize: '0.9rem' }}>
-                  <span
-                    style={{
-                      fontWeight: '800',
-                      color: item.completado ? '#c4a48c' : '#ffffff',
-                      textDecoration: item.completado ? 'line-through' : 'none'
-                    }}
-                  >
-                    {item.cantidad}x {item.name}
-                  </span>
-                </div>
-              </div>
-            ))
-          ) : (
+          {allItems.length === 0 ? (
             <div style={{ fontSize: '0.8rem', color: '#c4a48c' }}>Sin platos especificados</div>
+          ) : (
+            <>
+              {/* Platos Pendientes por Preparar */}
+              {itemsPendientes.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {itemsListos.length > 0 && (
+                    <div style={{ fontSize: '0.72rem', color: '#ffcc00', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      🔥 Pendientes por preparar ({itemsPendientes.length}):
+                    </div>
+                  )}
+                  {itemsPendientes.map((item) => {
+                    const sabor = item.sabor || item.flavor || (item.nota ? `[${item.nota}]` : null);
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => onToggleItem && onToggleItem(orden.id, item.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          cursor: 'pointer',
+                          padding: '7px 9px',
+                          borderRadius: '8px',
+                          backgroundColor: item.esAdicion ? 'rgba(226, 115, 41, 0.22)' : 'rgba(255, 255, 255, 0.04)',
+                          border: item.esAdicion ? '1.5px solid #e27329' : '1px solid #52301c',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '22px',
+                            height: '22px',
+                            borderRadius: '6px',
+                            border: '2px solid #e27329',
+                            backgroundColor: 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}
+                        />
+
+                        <div style={{ flex: 1, fontSize: '0.9rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: '800', color: '#ffffff' }}>
+                              {item.cantidad}x {item.name}
+                            </span>
+                            {item.esAdicion && (
+                              <span
+                                style={{
+                                  backgroundColor: '#e27329',
+                                  color: '#ffffff',
+                                  fontSize: '0.68rem',
+                                  fontWeight: '900',
+                                  padding: '1px 6px',
+                                  borderRadius: '4px'
+                                }}
+                              >
+                                🔥 ADICIÓN
+                              </span>
+                            )}
+                          </div>
+                          {sabor && (
+                            <div style={{ fontSize: '0.78rem', color: '#ffcc00', fontStyle: 'italic', marginTop: '2px' }}>
+                              👉 {sabor}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Platos que ya fueron preparados previamente */}
+              {itemsListos.length > 0 && (
+                <div style={{ marginTop: itemsPendientes.length > 0 ? '6px' : 0, paddingTop: itemsPendientes.length > 0 ? '6px' : 0, borderTop: itemsPendientes.length > 0 ? '1px dashed #52301c' : 'none' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#8d6e63', fontWeight: '800', textTransform: 'uppercase', marginBottom: '4px' }}>
+                    ✅ Ya listos / despachados ({itemsListos.length}):
+                  </div>
+                  {itemsListos.map((item) => {
+                    const sabor = item.sabor || item.flavor || (item.nota ? `[${item.nota}]` : null);
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => onToggleItem && onToggleItem(orden.id, item.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          padding: '5px 8px',
+                          borderRadius: '6px',
+                          opacity: 0.65,
+                          transition: 'all 0.15s ease'
+                        }}
+                        title="Toca para desmarcar y regresar a pendientes si es necesario"
+                      >
+                        <div
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '4px',
+                            border: '1px solid #2e7d32',
+                            backgroundColor: '#2e7d32',
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}
+                        >
+                          <Check size={13} />
+                        </div>
+                        <span style={{ fontSize: '0.825rem', color: '#a89078', textDecoration: 'line-through' }}>
+                          {item.cantidad}x {item.name} {sabor ? `(${sabor})` : ''}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
 

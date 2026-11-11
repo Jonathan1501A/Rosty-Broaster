@@ -34,231 +34,119 @@ export const printThermalReceipt80mm = ({
     const sabor = it.sabor || it.flavor || (it.nota ? `[${it.nota}]` : null);
     return `
       <tr>
-        <td class="col-cant">${cant}x</td>
-        <td class="col-desc">
-          <div class="prod-name">${escapeHtml(it.name)}</div>
-          ${sabor ? `<div class="prod-flavor">👉 ${escapeHtml(sabor)}</div>` : ''}
+        <td class="col-cant" style="font-weight: 900; padding: 3px 0; vertical-align: top; width: 14%;">${cant}x</td>
+        <td class="col-desc" style="padding: 3px 0; vertical-align: top; width: 56%;">
+          <div style="font-weight: 700; word-break: break-word;">${escapeHtml(it.name)}</div>
+          ${sabor ? `<div style="font-size: 10px; font-style: italic; margin-top: 1px;">👉 ${escapeHtml(sabor)}</div>` : ''}
         </td>
-        <td class="col-price">${formatCurrency(itemTotal)}</td>
+        <td class="col-price" style="font-weight: 900; padding: 3px 0; vertical-align: top; width: 30%; text-align: right; white-space: nowrap;">${formatCurrency(itemTotal)}</td>
       </tr>
     `;
   }).join('');
 
   const paymentDetails = order.metodoPago ? `
-    <div class="line-flex" style="margin-top: 4px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 11px;">
       <span>Método de pago:</span>
-      <span class="bold uppercase">${escapeHtml(order.metodoPago)}</span>
+      <span style="font-weight: 900; text-transform: uppercase;">${escapeHtml(order.metodoPago)}</span>
     </div>
     ${order.montoRecibido !== undefined && order.montoRecibido > 0 && order.metodoPago === 'efectivo' ? `
-      <div class="line-flex">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px;">
         <span>Efectivo recibido:</span>
         <span>${formatCurrency(order.montoRecibido)}</span>
       </div>
-      <div class="line-flex">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px;">
         <span>Cambio / Vueltas:</span>
-        <span class="bold">${formatCurrency(order.cambio || (order.montoRecibido - total))}</span>
+        <span style="font-weight: 900;">${formatCurrency(order.cambio || (order.montoRecibido - total))}</span>
       </div>
     ` : ''}
   ` : '';
 
-  const ticketHtml = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>Comanda #${order.id} - 80mm</title>
-        <style>
-          @page {
-            size: 80mm auto;
-            margin: 0;
-          }
-          * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-          }
-          html, body {
-            width: 80mm;
-            background: #ffffff !important;
-            color: #000000 !important;
-            font-family: 'JetBrains Mono', Consolas, 'Courier New', Courier, monospace;
-            font-size: 12px;
-            line-height: 1.35;
-          }
-          body {
-            padding: 4mm 4mm 15mm 4mm;
-          }
-          .ticket-wrapper {
-            width: 72mm;
-            max-width: 72mm;
-            margin: 0 auto;
-          }
-          .center { text-align: center; }
-          .bold { font-weight: 900; }
-          .uppercase { text-transform: uppercase; }
-          .title {
-            font-size: 17px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: -0.5px;
-            margin-bottom: 2px;
-          }
-          .subtitle { font-size: 10px; margin-bottom: 2px; }
-          .meta-info { font-size: 10.5px; }
-          .dashed-divider {
-            border-top: 1px dashed #000000;
-            margin: 6px 0;
-          }
-          .double-divider {
-            border-top: 2px dashed #000000;
-            margin: 8px 0;
-          }
-          .service-badge {
-            font-size: 13px;
-            font-weight: 900;
-            text-align: center;
-            margin-bottom: 4px;
-          }
-          .info-block { font-size: 11px; }
-          .info-block div { margin-bottom: 1px; }
-          table.items-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11.5px;
-            margin: 4px 0;
-          }
-          table.items-table th {
-            border-bottom: 1px solid #000000;
-            padding-bottom: 3px;
-            font-size: 10px;
-            font-weight: 900;
-            text-align: left;
-          }
-          table.items-table td {
-            padding: 3px 0;
-            vertical-align: top;
-          }
-          .col-cant { width: 14%; font-weight: 900; }
-          .col-desc { width: 56%; }
-          .col-price { width: 30%; text-align: right; font-weight: 900; white-space: nowrap; }
-          .prod-name { font-weight: 700; word-break: break-word; }
-          .prod-flavor { font-size: 10px; font-style: italic; margin-top: 1px; }
-          .line-flex {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-          .total-box {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 15px;
-            font-weight: 900;
-            padding: 4px 0;
-          }
-          .footer-section {
-            text-align: center;
-            font-size: 10px;
-            margin-top: 8px;
-          }
-          .footer-msg {
-            font-size: 11px;
-            font-weight: 900;
-            text-transform: uppercase;
-            margin-bottom: 3px;
-          }
-          .cutter-space {
-            height: 14mm;
-            display: block;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="ticket-wrapper">
-          <div class="center">
-            <div class="title">${escapeHtml(nombre)}</div>
-            ${slogan ? `<div class="subtitle">${escapeHtml(slogan)}</div>` : ''}
-            ${nit ? `<div class="meta-info bold">${escapeHtml(nit)}</div>` : ''}
-            ${direccion ? `<div class="meta-info">${escapeHtml(direccion)}</div>` : ''}
-            ${telefono ? `<div class="meta-info">${escapeHtml(telefono)}</div>` : ''}
-          </div>
+  const ticketInnerHtml = `
+    <div style="text-align: center; margin-bottom: 6px;">
+      <div style="font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px; margin-bottom: 2px;">${escapeHtml(nombre)}</div>
+      ${slogan ? `<div style="font-size: 10px; margin-bottom: 2px;">${escapeHtml(slogan)}</div>` : ''}
+      ${nit ? `<div style="font-size: 11px; font-weight: 900; margin-bottom: 2px;">${escapeHtml(nit)}</div>` : ''}
+      ${direccion ? `<div style="font-size: 10px;">${escapeHtml(direccion)}</div>` : ''}
+      ${telefono ? `<div style="font-size: 10px;">${escapeHtml(telefono)}</div>` : ''}
+    </div>
 
-          <div class="dashed-divider"></div>
+    <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
 
-          <div class="info-block">
-            <div class="service-badge uppercase">${escapeHtml(tipoServicioLabel)}</div>
-            <div><strong>Comanda:</strong> #${escapeHtml(order.id)}</div>
-            <div><strong>Fecha:</strong> ${escapeHtml(fechaFormateada)}</div>
-            ${order.cliente ? `<div><strong>Cliente:</strong> ${escapeHtml(order.cliente)}</div>` : ''}
-            ${order.destino && order.tipo === 'delivery' ? `<div><strong>Dirección:</strong> ${escapeHtml(order.destino)}</div>` : ''}
-            ${order.datosExtra ? `<div><strong>Detalle/Tel:</strong> ${escapeHtml(order.datosExtra)}</div>` : ''}
-            ${order.domiciliarioNombre ? `<div><strong>Repartidor:</strong> 🛵 ${escapeHtml(order.domiciliarioNombre)}</div>` : ''}
-            ${order.atendidoPor ? `<div><strong>Atendido por:</strong> ${escapeHtml(order.atendidoPor)}</div>` : ''}
-          </div>
-
-          <div class="dashed-divider"></div>
-
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th class="col-cant">Cant</th>
-                <th class="col-desc">Producto</th>
-                <th class="col-price" style="text-align: right;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-            </tbody>
-          </table>
-
-          <div class="double-divider"></div>
-
-          <div class="total-box">
-            <span>TOTAL A PAGAR:</span>
-            <span>${formatCurrency(total)}</span>
-          </div>
-
-          ${paymentDetails}
-
-          <div class="dashed-divider"></div>
-
-          <div class="footer-section">
-            <div class="footer-msg">${escapeHtml(mensajeFinal)}</div>
-            <div>${escapeHtml(pieFactura)}</div>
-          </div>
-
-          <div class="cutter-space"></div>
+    <div style="font-size: 11px; line-height: 1.35;">
+      <div style="font-size: 13px; font-weight: 900; text-align: center; text-transform: uppercase; margin-bottom: 4px;">${escapeHtml(tipoServicioLabel)}</div>
+      <div><strong>Comanda:</strong> #${escapeHtml(order.id)}</div>
+      <div><strong>Fecha:</strong> ${escapeHtml(fechaFormateada)}</div>
+      ${order.cliente ? `<div><strong>Cliente:</strong> ${escapeHtml(order.cliente)}</div>` : ''}
+      ${order.destino && order.tipo === 'delivery' ? `<div><strong>Dirección:</strong> ${escapeHtml(order.destino)}</div>` : ''}
+      ${order.datosExtra ? `<div><strong>Detalle/Tel:</strong> ${escapeHtml(order.datosExtra)}</div>` : ''}
+      ${order.domiciliarioNombre ? `<div><strong>Repartidor:</strong> 🛵 ${escapeHtml(order.domiciliarioNombre)}</div>` : ''}
+      ${order.atendidoPor ? `<div><strong>Atendido por:</strong> ${escapeHtml(order.atendidoPor)}</div>` : ''}
+      ${order.peticionCliente ? `
+        <div style="margin-top: 5px; padding: 4px 6px; border: 1.5px dashed #000; font-size: 11px; background-color: #fafafa;">
+          <strong>📝 PETICIÓN:</strong> ${escapeHtml(order.peticionCliente)}
         </div>
-      </body>
-    </html>
+      ` : ''}
+    </div>
+
+    <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+    <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; margin: 4px 0;">
+      <thead>
+        <tr style="border-bottom: 1px solid #000;">
+          <th style="width: 14%; text-align: left; font-size: 10px; font-weight: 900; padding-bottom: 3px;">Cant</th>
+          <th style="width: 56%; text-align: left; font-size: 10px; font-weight: 900; padding-bottom: 3px;">Producto</th>
+          <th style="width: 30%; text-align: right; font-size: 10px; font-weight: 900; padding-bottom: 3px;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+
+    <div style="border-top: 2px dashed #000; margin: 8px 0;"></div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 900; padding: 4px 0;">
+      <span>TOTAL A PAGAR:</span>
+      <span>${formatCurrency(total)}</span>
+    </div>
+
+    ${paymentDetails}
+
+    <div style="border-top: 1px dashed #000; margin: 8px 0 6px 0;"></div>
+
+    <div style="text-align: center; font-size: 10px; margin-top: 6px;">
+      <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; margin-bottom: 3px;">${escapeHtml(mensajeFinal)}</div>
+      <div>${escapeHtml(pieFactura)}</div>
+    </div>
+
+    <div style="height: 12mm; display: block;"></div>
   `;
 
-  let iframe = document.getElementById('comanda-thermal-printer-frame');
-  if (!iframe) {
-    iframe = document.createElement('iframe');
-    iframe.id = 'comanda-thermal-printer-frame';
-    iframe.style.position = 'fixed';
-    iframe.style.top = '-9999px';
-    iframe.style.left = '-9999px';
-    iframe.style.width = '80mm';
-    iframe.style.height = '100mm';
-    iframe.style.border = 'none';
-    document.body.appendChild(iframe);
+  // Inyectar en contenedor dedicado para impresión limpia directa (sin pantalla en blanco)
+  let printArea = document.getElementById('thermal-receipt-printable-area');
+  if (!printArea) {
+    printArea = document.createElement('div');
+    printArea.id = 'thermal-receipt-printable-area';
+    document.body.appendChild(printArea);
   }
+  printArea.innerHTML = ticketInnerHtml;
 
-  const doc = iframe.contentWindow.document;
-  doc.open();
-  doc.write(ticketHtml);
-  doc.close();
-
-  setTimeout(() => {
-    try {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    } catch (e) {
-      window.print();
+  const cleanup = () => {
+    const el = document.getElementById('thermal-receipt-printable-area');
+    if (el && el.parentNode) {
+      el.parentNode.removeChild(el);
     }
-  }, 250);
+  };
+
+  window.addEventListener('afterprint', cleanup, { once: true });
+  setTimeout(cleanup, 45000);
+
+  // Ejecutar impresión directa
+  try {
+    window.print();
+  } catch (err) {
+    console.error('Error al invocar impresión térmica:', err);
+  }
 };
 
 export default function ComandaPrintModal({
@@ -427,6 +315,11 @@ export default function ComandaPrintModal({
               )}
               {order.atendidoPor && (
                 <div><strong>Atendido por:</strong> {order.atendidoPor}</div>
+              )}
+              {order.peticionCliente && (
+                <div style={{ marginTop: '6px', padding: '5px 8px', backgroundColor: '#f5f5f5', border: '1.5px dashed #000', borderRadius: '4px' }}>
+                  <strong>📝 Petición:</strong> {order.peticionCliente}
+                </div>
               )}
             </div>
 

@@ -25,11 +25,31 @@ export default function ReportsView({ stats, tenant, onRefresh, onOpenCloseCash,
   const [isExporting, setIsExporting] = useState(false);
   const [selectedClosure, setSelectedClosure] = useState(null);
 
+  // Estados de paginación y búsqueda para todas las ventas del día
+  const [ventasLimit, setVentasLimit] = useState(15);
+  const [ventasSearch, setVentasSearch] = useState('');
+
   // Datos del turno actual
   const totalVendido = Number(stats?.totalVendido) || 0;
   const totalComandas = Number(stats?.totalComandasDespachadas) || 0;
   const ticketPromedio = Number(stats?.promedioTicket) || 0;
   const ventas = stats?.ultimasVentas || [];
+
+  // Filtro de ventas por término de búsqueda
+  const filteredVentas = ventas.filter((v) => {
+    if (!ventasSearch.trim()) return true;
+    const q = ventasSearch.toLowerCase();
+    return (
+      (v.id || '').toLowerCase().includes(q) ||
+      (v.ordenId || '').toLowerCase().includes(q) ||
+      (v.destino || '').toLowerCase().includes(q) ||
+      (v.cliente || '').toLowerCase().includes(q) ||
+      (v.despachadoPor || '').toLowerCase().includes(q) ||
+      (v.metodoPago || '').toLowerCase().includes(q)
+    );
+  });
+
+  const displayedVentas = filteredVentas.slice(0, ventasLimit);
 
   const totalGastos = Number(stats?.totalGastos) || 0;
   const totalGastosEfectivo = Number(stats?.totalGastosEfectivo) || 0;
@@ -509,16 +529,36 @@ export default function ReportsView({ stats, tenant, onRefresh, onOpenCloseCash,
               overflow: 'hidden'
             }}
           >
-            <div style={{ padding: '16px 20px', borderBottom: '2px solid #5c351e', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2b180d' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '2px solid #5c351e', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2b180d', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ShieldCheck size={20} color="#2e7d32" />
                 <h3 style={{ fontSize: '1.05rem', fontWeight: '900', color: '#ffcc00', margin: 0 }}>
-                  Registro de Facturación & Trazabilidad de Ventas
+                  Registro de Facturación & Ventas del Día
                 </h3>
               </div>
-              <span style={{ fontSize: '0.8rem', color: '#c4a48c', fontWeight: '700' }}>
-                {ventas.length} comprobantes registrados
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 Buscar comanda, mesa o cliente..."
+                  value={ventasSearch}
+                  onChange={(e) => {
+                    setVentasSearch(e.target.value);
+                    setVentasLimit(15);
+                  }}
+                  style={{
+                    backgroundColor: '#1f1109',
+                    border: '1.5px solid #5c351e',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    color: '#fff',
+                    fontSize: '0.8rem',
+                    width: '220px'
+                  }}
+                />
+                <span style={{ fontSize: '0.8rem', color: '#ffcc00', fontWeight: '800', backgroundColor: '#341e11', padding: '5px 12px', borderRadius: '12px', border: '1px solid #5c351e' }}>
+                  {filteredVentas.length} ventas hoy
+                </span>
+              </div>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
@@ -535,14 +575,14 @@ export default function ReportsView({ stats, tenant, onRefresh, onOpenCloseCash,
                   </tr>
                 </thead>
                 <tbody>
-                  {ventas.length === 0 ? (
+                  {displayedVentas.length === 0 ? (
                     <tr>
                       <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#c4a48c' }}>
-                        No hay transacciones registradas en este turno aún.
+                        {ventasSearch.trim() ? 'No se encontraron ventas con ese criterio de búsqueda.' : 'No hay transacciones registradas en este turno aún.'}
                       </td>
                     </tr>
                   ) : (
-                    ventas.map((v) => {
+                    displayedVentas.map((v) => {
                       const methodBg = v.metodoPago === 'efectivo' ? '#2e7d32' : v.metodoPago === 'tarjeta' ? '#0288d1' : '#ad1457';
                       const dateObj = new Date(v.timestamp);
 
@@ -596,6 +636,96 @@ export default function ReportsView({ stats, tenant, onRefresh, onOpenCloseCash,
                 </tbody>
               </table>
             </div>
+
+            {/* Botones de Paginación / Ver Más Ventas del Día */}
+            {filteredVentas.length > ventasLimit && (
+              <div
+                style={{
+                  padding: '16px 20px',
+                  borderTop: '2px solid #5c351e',
+                  backgroundColor: '#2b180d',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '14px',
+                  flexWrap: 'wrap'
+                }}
+              >
+                <span style={{ fontSize: '0.85rem', color: '#c4a48c', fontWeight: '700' }}>
+                  Mostrando <strong>{displayedVentas.length}</strong> de <strong>{filteredVentas.length}</strong> ventas
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setVentasLimit((prev) => prev + 25)}
+                  style={{
+                    backgroundColor: '#3d2314',
+                    border: '1.5px solid #ffcc00',
+                    color: '#ffcc00',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    fontWeight: '800',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ➕ Ver 25 Más ({filteredVentas.length - ventasLimit} restantes)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVentasLimit(filteredVentas.length)}
+                  style={{
+                    backgroundColor: '#e27329',
+                    border: '1.5px solid #ffcc00',
+                    color: '#ffffff',
+                    padding: '8px 22px',
+                    borderRadius: '8px',
+                    fontWeight: '900',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(226, 115, 41, 0.4)'
+                  }}
+                >
+                  👀 Ver Todas las Ventas del Día ({filteredVentas.length})
+                </button>
+              </div>
+            )}
+
+            {ventasLimit >= filteredVentas.length && filteredVentas.length > 15 && (
+              <div
+                style={{
+                  padding: '12px 20px',
+                  borderTop: '1px solid #4a2c1a',
+                  backgroundColor: '#2b180d',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px'
+                }}
+              >
+                <span style={{ fontSize: '0.825rem', color: '#4ade80', fontWeight: '800' }}>
+                  ✓ Mostrando las {filteredVentas.length} ventas del día en su totalidad.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setVentasLimit(15)}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: '1px solid #5c351e',
+                    color: '#c4a48c',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Mostrar menos (primeras 15)
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}

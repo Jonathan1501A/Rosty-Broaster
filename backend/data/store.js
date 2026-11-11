@@ -1054,7 +1054,16 @@ class Store {
       destino: orderData.destino,
       cliente: orderData.cliente || 'Cliente Salón',
       datosExtra: orderData.datosExtra || '',
-      items: orderData.items || [],
+      peticionCliente: orderData.peticionCliente ? String(orderData.peticionCliente).trim() : '',
+      items: (orderData.items || []).map((it) => ({
+        id: it.id,
+        name: String(it.name).slice(0, 80),
+        sabor: it.sabor || null,
+        nota: it.nota || null,
+        price: Math.max(0, Number(it.price) || 0),
+        cantidad: Math.max(1, Number(it.cantidad) || 1),
+        completado: Boolean(it.completado) || false
+      })),
       total: Number(orderData.total) || 0,
       estado: orderData.estado || 'En preparación',
       cobrado: Boolean(orderData.cobrado) || false,
@@ -1089,15 +1098,100 @@ class Store {
     const order = tenant.orders.find((o) => o.id === orderId);
     if (!order) return null;
 
+    let adicionesDetectadas = [];
+
     if (Array.isArray(updateData.items)) {
-      order.items = updateData.items.map((it) => ({
-        id: it.id,
-        name: String(it.name).slice(0, 80),
-        price: Math.max(0, Number(it.price) || 0),
-        cantidad: Math.max(1, Number(it.cantidad) || 1),
-        completado: it.completado || false
-      }));
+      const prevItems = order.items || [];
+      const updatedItems = [];
+
+      for (const it of updateData.items) {
+        // Encontrar coincidencia previa por ID o por nombre + sabor
+        const prevMatch = prevItems.find((p) => 
+          String(p.id) === String(it.id) || 
+          (p.name === it.name && (p.sabor || '') === (it.sabor || ''))
+        );
+        const currentQty = Math.max(1, Number(it.cantidad) || 1);
+
+        if (prevMatch) {
+          const prevQty = Number(prevMatch.cantidad) || 1;
+          const wasCompleted = Boolean(prevMatch.completado);
+
+          if (currentQty > prevQty) {
+            // Se incrementó la cantidad: la diferencia es una nueva adición a preparar
+            const diff = currentQty - prevQty;
+            adicionesDetectadas.push({
+              id: it.id,
+              name: it.name,
+              sabor: it.sabor || prevMatch.sabor || null,
+              cantidad: diff,
+              price: Number(it.price) || 0,
+              agregadoAt: new Date().toISOString()
+            });
+
+            updatedItems.push({
+              id: it.id,
+              name: String(it.name).slice(0, 80),
+              sabor: it.sabor || prevMatch.sabor || null,
+              nota: it.nota || prevMatch.nota || null,
+              price: Math.max(0, Number(it.price) || 0),
+              cantidad: currentQty,
+              cantidadAnterior: prevQty,
+              nuevasUnidades: diff,
+              completado: false, // Pendiente para que cocina prepare lo adicional
+              yaPreparadoAnteriormente: wasCompleted,
+              esAdicion: true,
+              agregadoAt: new Date().toISOString()
+            });
+          } else {
+            // Mantiene o reduce cantidad: preserva estrictamente el estado previo completado
+            updatedItems.push({
+              id: it.id,
+              name: String(it.name).slice(0, 80),
+              sabor: it.sabor || prevMatch.sabor || null,
+              nota: it.nota || prevMatch.nota || null,
+              price: Math.max(0, Number(it.price) || 0),
+              cantidad: currentQty,
+              completado: it.completado !== undefined ? Boolean(it.completado) : wasCompleted,
+              yaPreparadoAnteriormente: wasCompleted
+            });
+          }
+        } else {
+          // Es un ítem completamente nuevo
+          adicionesDetectadas.push({
+            id: it.id,
+            name: it.name,
+            sabor: it.sabor || null,
+            cantidad: currentQty,
+            price: Number(it.price) || 0,
+            agregadoAt: new Date().toISOString()
+          });
+
+          updatedItems.push({
+            id: it.id,
+            name: String(it.name).slice(0, 80),
+            sabor: it.sabor || null,
+            nota: it.nota || null,
+            price: Math.max(0, Number(it.price) || 0),
+            cantidad: currentQty,
+            completado: false,
+            esAdicion: true,
+            agregadoAt: new Date().toISOString()
+          });
+        }
+      }
+
+      order.items = updatedItems;
       order.total = order.items.reduce((acc, curr) => acc + curr.price * curr.cantidad, 0);
+
+      // Si se agregaron cosas nuevas a una orden que ya estaba Lista, vuelve a 'En preparación'
+      if (adicionesDetectadas.length > 0) {
+        order.estado = 'En preparación';
+        if (!Array.isArray(order.historialAdiciones)) order.historialAdiciones = [];
+        order.historialAdiciones.push({
+          timestamp: new Date().toISOString(),
+          items: adicionesDetectadas
+        });
+      }
 
       // Si la comanda es de salón / mesa, sincronizar mesa
       if (order.tipo === 'dine_in' && order.mesaNumero) {
@@ -1111,11 +1205,13 @@ class Store {
     if (updateData.cliente !== undefined) order.cliente = String(updateData.cliente).trim();
     if (updateData.destino !== undefined) order.destino = String(updateData.destino).trim();
     if (updateData.datosExtra !== undefined) order.datosExtra = String(updateData.datosExtra).trim();
+    if (updateData.peticionCliente !== undefined) order.peticionCliente = String(updateData.peticionCliente).trim();
     if (updateData.domiciliarioId !== undefined) order.domiciliarioId = updateData.domiciliarioId;
     if (updateData.domiciliarioNombre !== undefined) order.domiciliarioNombre = updateData.domiciliarioNombre;
     if (updateData.domiciliarioTelefono !== undefined) order.domiciliarioTelefono = updateData.domiciliarioTelefono;
 
     order.updatedAt = new Date().toISOString();
+    order.nuevasAdiciones = adicionesDetectadas; // Adjunto para sockets y cocina
     this.persist();
     return order;
   }
@@ -1217,7 +1313,7 @@ class Store {
     const order = tenant.orders.find((o) => o.id === orderId);
     if (!order || !order.items) return null;
 
-    const item = order.items.find((i) => i.id === Number(itemId));
+    const item = order.items.find((i) => String(i.id) === String(itemId) || i.id === Number(itemId));
     if (item) {
       item.completado = !item.completado;
       this.persist();
@@ -1328,9 +1424,11 @@ class Store {
       ordenesListas,
       mesasOcupadas,
       mesasLibres,
-      ultimasVentas: tenant.salesHistory.slice(0, 15),
-      gastos: tenant.expenses.slice(0, 30),
-      cierresAnteriores: this.getClosures(tenantId).slice(0, 50)
+      ultimasVentas: tenant.salesHistory || [],
+      gastos: tenant.expenses || [],
+      totalVentasDelDia: (tenant.salesHistory || []).length,
+      totalGastosDelDia: (tenant.expenses || []).length,
+      cierresAnteriores: this.getClosures(tenantId)
     };
   }
 
