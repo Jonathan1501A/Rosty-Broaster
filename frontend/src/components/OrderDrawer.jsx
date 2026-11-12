@@ -193,8 +193,6 @@ export default function OrderDrawer({
     prevIsOpenRef.current = isOpen;
   }, [isOpen, initialPeticion]);
 
-  if (!isOpen) return null;
-
   // Agregar al carrito
   const handleAddToCart = (product) => {
     setCart((prev) => {
@@ -327,6 +325,8 @@ export default function OrderDrawer({
     }
     return results;
   }, [currentMenu, activeCategory, searchQuery, isSearching]);
+
+  if (!isOpen) return null;
 
   return (
     <div
